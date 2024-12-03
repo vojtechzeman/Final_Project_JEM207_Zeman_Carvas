@@ -1,7 +1,7 @@
 # Final_Project_JEM207_Zeman_Carvas
 Real Estate Market Analysis
 
-Vision: We will look for undervalued apartments in Prague. The user will be able to independently analyze rental prices and purchase prices. The analysis will be limited to apartments in the Prague area.
+Vision: We will identify undervalued apartments in Prague. The user will be able to independently analyze rental prices and purchase prices. The analysis will be limited to apartments in the Prague area.
 
 The project will have the following parts:
 - Data scraping
