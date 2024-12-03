@@ -7,7 +7,7 @@ The project will have the following parts:
 - Data scraping
 - Updating the previous scraped dataset (to speed up the second and subsequent processes).
 - Selecting only deleted ads (ad is in the previous scraping, but not in the current one), that will mean we found the real market value of the properties (many ads are advertised overpriced)
-- Data cleasning
+- Data cleaning
 - Modeling (detrending time series data, application of machine learning)
 - Finding undervalued properties
 - Graphical analysis of the price distribution and some other data summary
