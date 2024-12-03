@@ -11,7 +11,7 @@ The project will have the following parts:
 - Modeling (detrending time series data, application of machine learning)
 - Finding undervalued properties
 - Graphical analysis of the price distribution and some other data summary
-- All processes will run only on the selected parameter: rents vs purchase prices
+- All processes will run only on the parameter selected by the user: rents vs purchase prices (speeding up processes)
 
 Other potential parts:
 - (Model verification implementation using existing home value estimator websites)
