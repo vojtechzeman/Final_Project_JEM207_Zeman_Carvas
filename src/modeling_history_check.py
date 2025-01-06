@@ -10,23 +10,23 @@ class HistoryChecker:
     def check_model_history(self, check_sale: bool = False, check_rent: bool = False) -> None:
         """
         It checks when model updates were made.
-        Model updates are made together with the "deleted_listings_sale" dataset updates.
-        Therefore we check just the "deleted_listings_sale" dataset.
+        Model updates are made together with the "deleted_listings_..." dataset updates.
+        Therefore, we check the dataset "deleted_listings_..." and additionally we check when the last scraping was done, because the data from here is not yet in the dataset "deleted_listings_...".
         """
 
         if not check_sale and not check_rent:
-            raise ValueError("You have to check at least one type")
+            pass
         
         if check_sale and check_rent:
             raise ValueError("You can check only one type at a time.")
 
         # Loading data
         if check_sale:
-            df = pd.read_csv("deleted_listings_sale.csv", delimiter=";")
+            df = pd.read_csv("data/raw/deleted_listings_sale.csv", delimiter=";")
             last_scraping_file = max(glob.glob("last_scraping_for_modeling/sale_*.csv"))
             last_scraping = pd.read_csv(last_scraping_file, delimiter=";")
         if check_rent:
-            df = pd.read_csv("deleted_listings_rent.csv", delimiter=";")
+            df = pd.read_csv("data/raw/deleted_listings_rent.csv", delimiter=";")
             last_scraping_file = max(glob.glob("last_scraping_for_modeling/rent_*.csv"))
             last_scraping = pd.read_csv(last_scraping_file, delimiter=";")
 
@@ -86,6 +86,3 @@ class HistoryChecker:
         plt.show()
 
 
-
-hc = HistoryChecker()
-hc.check_model_history(check_sale=False, check_rent=True)

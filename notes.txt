@@ -1,0 +1,4 @@
+potřebujeme do scrapingu přidat URL, neni potřeba na modelování, je potřeba na hledání podceněných (uživatelská přívětivost)
+
+
+modelování
