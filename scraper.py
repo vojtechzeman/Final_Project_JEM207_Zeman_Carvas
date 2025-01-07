@@ -49,7 +49,7 @@ def convert_description_to_df(json_data):
     db = pd.DataFrame()
 
     # region Parsing to established format
-    db["code"] = [str(json_data["recommendations_data"]["hash_id"])]
+    db["code"] = [int(json_data["recommendations_data"]["hash_id"])]
     db["description"] = str(json_data["text"]["value"])
     db["meta_description"] = str(json_data["meta_description"])
     db["category_main_cb"] = int(json_data["seo"]["category_main_cb"])
@@ -124,20 +124,22 @@ def get_all_sreality(category_type: int=1):
         list_of_dfs.append(convert_sreality_to_df(json_data))
         page += 1
 
-    # Create DataFrame and include only code (hash) and price
+    # Create DataFrame
     db = pd.concat(list_of_dfs)
-    db = db[["hash_id", "price"]]
 
     # Remove adverts costing 1 CZK
     db = db.drop(db[db.price == 1].index).reset_index(drop=True)
 
-    return db
+    # Change id to code as it will be used for matching
+    db.rename(columns={'hash_id':'code'}, inplace=True)
+
+    return db[["code", "price"]].join(pd.json_normalize(db["seo"])["locality"])
 
 
 def get_all_description(db):
     list_of_dfs = []
 
-    for code in list(db["hash_id"]):
+    for code in list(db["code"]):
         json_data = get_description(code)
         if len(json_data) == 1:
             pass # Invalid code TODO: Throw error?
@@ -145,10 +147,26 @@ def get_all_description(db):
 
     return pd.concat(list_of_dfs)
 
+def create_link(rw):
+    ms = str(rw["meta_description"])
+    cat = ms.split()[0].lower()
+    if ms.split()[1] == "atypické":
+        intent = ms.split()[6]
+        size = "atypicky"
+    else:
+        intent = ms.split()[5]
+        size = ms.split()[1]
+
+    if intent == "prodeji":
+        intent = "prodej"
+
+    return "https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + rw["locality"] + "/" + str(rw["code"])
 
 def parse(base, desc):
-    pass
+    db = pd.merge(base, desc, on='code')
+    db["link"] = db.apply(create_link, axis=1)
 
+    return db
 
 
 def run():
@@ -160,4 +178,4 @@ def run():
 
 
 
-# TODO: matching
+# TODO: matching, saving to csv
