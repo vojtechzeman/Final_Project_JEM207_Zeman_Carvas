@@ -4,6 +4,7 @@
 
 import requests # for making HTTP requests
 import pandas as pd
+import numpy as np
 import time
 import random
 
@@ -83,31 +84,26 @@ def convert_description_to_df(json_data):
     db["garage"] = int(json_data["recommendations_data"]["garage"])
     db["room_count_cb"] = int(json_data["recommendations_data"]["room_count_cb"])
     db["energy_efficiency_rating_cb"] = int(json_data["recommendations_data"]["energy_efficiency_rating_cb"])
+
+    itemRenameTable = {
+        "Poznámka k ceně": "note_about_price",
+        "ID zakázky": "id_of_order",
+        "Aktualizace": "last_update",
+        "Stavba": "material",
+        "Stav objektu": "age_of_building",
+        "Vlastnictví": "ownership_type",
+        "Podlaží": "floor",
+        "Užitná ploch": "usable_area",
+        "Plocha podlahová": "floor_area",
+        "Celková plocha": "total_area",
+        "Energetická náročnost budovy": "energy_efficiency_rating",
+        "Bezbariérový": "no_barriers",
+        "Datum zahájení prodeje": "start_of_offer"
+    }
+
     for item in json_data["items"]:
-        if item["name"] == "Poznámka k ceně":
-            db["note_about_price"] = item["value"]
-        elif item["name"] == "ID zakázky":
-            db["id_of_order"] = item["value"]
-        elif item["name"] == "Aktualizace":
-            db["last_update"] = item["value"]
-        elif item["name"] == "Stavba":
-            db["material"] = item["value"]
-        elif item["name"] == "Stav objektu":
-            db["age_of_building"] = item["value"]
-        elif item["name"] == "Vlastnictví":
-            db["ownership_type"] = item["value"]
-        elif item["name"] == "Podlaží":
-            db["floor"] = item["value"]
-        elif item["name"] == "Užitná plocha":
-            db["usable_area"] = item["value"]
-        elif item["name"] == "Plocha podlahová":
-            db["floor_area"] = item["value"]
-        elif item["name"] == "energy_efficiency_rating":
-            db["energy_efficiency_rating"] = item["value"]
-        elif item["name"] == "Bezbariérový":
-            db["no_barriers"] = item["value"]
-        elif item["name"] == "Datum zahájení prodeje":
-            db["start_of_offer"] = item["value"]
+        if item["name"] in itemRenameTable:
+            db[itemRenameTable[item["name"]]] = item["value"]
     # endregion
 
     return db
@@ -147,32 +143,50 @@ def get_all_description(db):
 
     return pd.concat(list_of_dfs)
 
-def create_link(rw):
-    ms = str(rw["meta_description"])
-    cat = ms.split()[0].lower()
-    if ms.split()[1] == "atypické":
-        intent = ms.split()[6]
+
+def clean(db):
+
+    # Energy rating cleaning
+    enrg = db["energy_efficiency_rating"]
+    if type(enrg) == str and "Třída" in enrg:
+        db["energy_efficiency_rating"] = enrg[6]
+
+        if " č." in enrg:
+            db["energy_efficiency_description"] = enrg[10:enrg.find(" č.")]
+        else:
+            db["energy_efficiency_description"] = enrg[10:]
+    else:
+        db["energy_efficiency_description"] = db["energy_efficiency_rating"] = np.nan
+
+    # Add link column
+    meta_desc = str(db["meta_description"])
+    cat = meta_desc.split()[0].lower()
+    if meta_desc.split()[1] == "atypické":
+        intent = meta_desc.split()[6]
         size = "atypicky"
     else:
-        intent = ms.split()[5]
-        size = ms.split()[1]
+        intent = meta_desc.split()[5]
+        size = meta_desc.split()[1]
 
     if intent == "prodeji":
         intent = "prodej"
 
-    return "https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + rw["locality"] + "/" + str(rw["code"])
+    db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
+                  str(db["code"]))
+    return db
+
+
 
 def parse(base, desc):
     db = pd.merge(base, desc, on='code')
-    db["link"] = db.apply(create_link, axis=1)
-
+    db = db.apply(clean, axis=1)
     return db
 
 
 def run():
     df_base = get_all_sreality()
     df_desc = get_all_description(df_base)
-    parse(df_base, df_desc)
+    return parse(df_base, df_desc)
 
 
 
