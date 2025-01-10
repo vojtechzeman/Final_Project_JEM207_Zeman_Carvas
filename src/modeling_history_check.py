@@ -15,7 +15,7 @@ class HistoryChecker:
         """
 
         if not check_sale and not check_rent:
-            pass
+            return
         
         if check_sale and check_rent:
             raise ValueError("You can check only one type at a time.")
@@ -84,4 +84,6 @@ class HistoryChecker:
 
         plt.tight_layout()
         plt.show()
+
+        print("Graph of model updates was created.")
 

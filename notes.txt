@@ -1,53 +1,10 @@
-potřebujeme do scrapingu přidat URL, neni potřeba na modelování, je potřeba na hledání podceněných (uživatelská přívětivost)
 
 
 
+potřebujeme do scrapingu přidat URL, bude se hodit při sdílení výsledků
 
-modelování
-['age_of_building', 'balcony', 'basin', 'broker_company', 'broker_id', 'building_condition', 'building_type', 'category_main_cb', 'category_sub_cb', 'category_type_cb', 'cellar', 'code', 'description', 'easy_access', 'energy_efficiency_rating_cb', 'floor', 'floor_area', 'furnished', 'garage', 'id_of_order', 'last_update', 'locality_country_id', 'locality_district_id', 'locality_gps_lat', 'locality_gps_lon', 'locality_municipality_id', 'locality_quarter_id', 'locality_region_id', 'locality_street_id', 'locality_ward_id', 'loggia', 'low_energy', 'material', 'meta_description', 'no_barriers', 'note_about_price', 'object_kind', 'object_type', 'ownership', 'ownership_type', 'parking_lots', 'room_count_cb', 'start_of_offer', 'terrace', 'timestamp', 'usable_area']
-age_of_building
-balcony
-basin
-broker_company
-broker_id
-building_condition
-building_type
-category_main_cb
-category_sub_cb
-category_type_cb
-cellar
-code
-description
-easy_access
-energy_efficiency_rating_cb
-floor
-floor_area
-furnished
-garage
-id_of_order
-last_update
-locality_country_id
-locality_district_id
-locality_gps_lat
-locality_gps_lon
-locality_municipality_id
-locality_quarter_id
-locality_region_id
-locality_street_id
-locality_ward_id
-loggia
-low_energy
-material
-meta_description
-no_barriers
-note_about_price
-object_kind
-object_type
-ownership
-ownership_type
-parking_lots
-room_count_cb
-start_of_offer
-terrace
-timestamp
-usable_area
+mega problém s usable_area, občas to nevyscrapuje
+taky mega problém s floor_area
+chybí i výtah
+
+
