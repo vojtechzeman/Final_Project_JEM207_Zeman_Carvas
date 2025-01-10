@@ -1,13 +1,18 @@
 """
     Scraper for the project. Uses Sreality.cz for gathering the data.
+    Run by calling run_online() (see run() description)
+    Operates with data.csv
 """
 
 import requests # for making HTTP requests
 import pandas as pd
 import numpy as np
 import time
+from datetime import datetime
 import random
 
+# Get current date
+date =  datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
 # Use headers as Sreality.cz obfuscates prices
 headers_user = {"User-Agent": "Mozilla/5.0"}
@@ -49,41 +54,47 @@ def convert_sreality_to_df(data):
 def convert_description_to_df(json_data):
     db = pd.DataFrame()
 
-    # region Parsing to established format
-    db["code"] = [int(json_data["recommendations_data"]["hash_id"])]
-    db["description"] = str(json_data["text"]["value"])
-    db["meta_description"] = str(json_data["meta_description"])
-    db["category_main_cb"] = int(json_data["seo"]["category_main_cb"])
-    db["category_sub_cb"] = int(json_data["seo"]["category_sub_cb"])
-    db["category_type_cb"] = int(json_data["seo"]["category_type_cb"])
-    db["broker_id"] = str(json_data["_embedded"]["seller"]["user_id"])
-    db["broker_company"] = str(json_data["_embedded"]["seller"]["_embedded"]["premise"]["name"])
-    db["furnished"] = int(json_data["recommendations_data"]["furnished"])
-    db["locality_gps_lat"] = float(json_data["recommendations_data"]["locality_gps_lat"])
-    db["locality_gps_lon"] = float(json_data["recommendations_data"]["locality_gps_lon"])
-    db["object_type"] = int(json_data["recommendations_data"]["object_type"])
-    db["parking_lots"] = int(json_data["recommendations_data"]["parking_lots"])
-    db["locality_street_id"] = int(json_data["recommendations_data"]["locality_street_id"])
-    db["locality_district_id"] = int(json_data["recommendations_data"]["locality_district_id"])
-    db["locality_ward_id"] = int(json_data["recommendations_data"]["locality_ward_id"])
-    db["locality_region_id"] = int(json_data["recommendations_data"]["locality_region_id"])
-    db["locality_quarter_id"] = int(json_data["recommendations_data"]["locality_quarter_id"])
-    db["locality_municipality_id"] = int(json_data["recommendations_data"]["locality_municipality_id"])
-    db["locality_country_id"] = int(json_data["recommendations_data"]["locality_country_id"])
-    db["terrace"] = int(json_data["recommendations_data"]["terrace"])
-    db["balcony"] = int(json_data["recommendations_data"]["balcony"])
-    db["loggia"] = int(json_data["recommendations_data"]["loggia"])
-    db["basin"] = int(json_data["recommendations_data"]["basin"])
-    db["cellar"] = int(json_data["recommendations_data"]["cellar"])
-    db["building_type"] = int(json_data["recommendations_data"]["building_type"])
-    db["object_kind"] = int(json_data["recommendations_data"]["object_kind"])
-    db["ownership"] = int(json_data["recommendations_data"]["ownership"])
-    db["low_energy"] = int(json_data["recommendations_data"]["low_energy"])
-    db["easy_access"] = int(json_data["recommendations_data"]["easy_access"])
-    db["building_condition"] = int(json_data["recommendations_data"]["building_condition"])
-    db["garage"] = int(json_data["recommendations_data"]["garage"])
-    db["room_count_cb"] = int(json_data["recommendations_data"]["room_count_cb"])
-    db["energy_efficiency_rating_cb"] = int(json_data["recommendations_data"]["energy_efficiency_rating_cb"])
+    elementRenameTable = {
+    "code": lambda: int(json_data["recommendations_data"]["hash_id"]),
+    "description": lambda: str(json_data["text"]["value"]),
+    "meta_description": lambda: str(json_data["meta_description"]),
+    "category_main_cb": lambda: int(json_data["seo"]["category_main_cb"]),
+    "category_sub_cb": lambda: int(json_data["seo"]["category_sub_cb"]),
+    "category_type_cb": lambda: int(json_data["seo"]["category_type_cb"]),
+    "broker_id": lambda: str(json_data["_embedded"]["seller"]["user_id"]),
+    "broker_company": lambda: str(json_data["_embedded"]["seller"]["_embedded"]["premise"]["name"]),
+    "furnished": lambda: int(json_data["recommendations_data"]["furnished"]),
+    "locality_gps_lat": lambda: float(json_data["recommendations_data"]["locality_gps_lat"]),
+    "locality_gps_lon": lambda: float(json_data["recommendations_data"]["locality_gps_lon"]),
+    "object_type": lambda: int(json_data["recommendations_data"]["object_type"]),
+    "parking_lots": lambda: int(json_data["recommendations_data"]["parking_lots"]),
+    "locality_street_id": lambda: int(json_data["recommendations_data"]["locality_street_id"]),
+    "locality_district_id": lambda: int(json_data["recommendations_data"]["locality_district_id"]),
+    "locality_ward_id": lambda: int(json_data["recommendations_data"]["locality_ward_id"]),
+    "locality_region_id": lambda: int(json_data["recommendations_data"]["locality_region_id"]),
+    "locality_quarter_id": lambda: int(json_data["recommendations_data"]["locality_quarter_id"]),
+    "locality_municipality_id": lambda: int(json_data["recommendations_data"]["locality_municipality_id"]),
+    "locality_country_id": lambda: int(json_data["recommendations_data"]["locality_country_id"]),
+    "terrace": lambda: int(json_data["recommendations_data"]["terrace"]),
+    "balcony": lambda: int(json_data["recommendations_data"]["balcony"]),
+    "loggia": lambda: int(json_data["recommendations_data"]["loggia"]),
+    "basin": lambda: int(json_data["recommendations_data"]["basin"]),
+    "cellar": lambda: int(json_data["recommendations_data"]["cellar"]),
+    "building_type": lambda: int(json_data["recommendations_data"]["building_type"]),
+    "object_kind": lambda: int(json_data["recommendations_data"]["object_kind"]),
+    "ownership": lambda: int(json_data["recommendations_data"]["ownership"]),
+    "low_energy": lambda: int(json_data["recommendations_data"]["low_energy"]),
+    "easy_access": lambda: int(json_data["recommendations_data"]["easy_access"]),
+    "building_condition": lambda: int(json_data["recommendations_data"]["building_condition"]),
+    "garage": lambda: int(json_data["recommendations_data"]["garage"]),
+    "room_count_cb": lambda: int(json_data["recommendations_data"]["room_count_cb"]),
+    "energy_efficiency_rating_cb": lambda: int(json_data["recommendations_data"]["energy_efficiency_rating_cb"]),
+    }
+    for element, func in elementRenameTable.items():
+        try:
+            db[element] = [func()]
+        except KeyError:
+            db[element] = [np.nan]
 
     itemRenameTable = {
         "Poznámka k ceně": "note_about_price",
@@ -96,6 +107,7 @@ def convert_description_to_df(json_data):
         "Užitná ploch": "usable_area",
         "Plocha podlahová": "floor_area",
         "Celková plocha": "total_area",
+        "Výtah": "elevator",
         "Energetická náročnost budovy": "energy_efficiency_rating",
         "Bezbariérový": "no_barriers",
         "Datum zahájení prodeje": "start_of_offer"
@@ -104,6 +116,11 @@ def convert_description_to_df(json_data):
     for item in json_data["items"]:
         if item["name"] in itemRenameTable:
             db[itemRenameTable[item["name"]]] = item["value"]
+            del itemRenameTable[item["name"]]
+
+    # Make sure all columns are filled either with data or NaN
+    for item_left in itemRenameTable:
+        db[itemRenameTable[item_left]] = np.nan
     # endregion
 
     return db
@@ -134,12 +151,15 @@ def get_all_sreality(category_type: int=1):
 
 def get_all_description(db):
     list_of_dfs = []
+    iter = 1
 
     for code in list(db["code"]):
         json_data = get_description(code)
         if len(json_data) == 1:
-            pass # Invalid code TODO: Throw error?
+            continue  # Invalid code
+        print("Getting details (" + str(iter) + ")")
         list_of_dfs.append(convert_description_to_df(json_data))
+        iter += 1
 
     return pd.concat(list_of_dfs)
 
@@ -173,8 +193,14 @@ def clean(db):
 
     db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
                   str(db["code"]))
-    return db
 
+    # Add columns for matching deleted adverts
+    db["deleted"] = 0
+    db["time of deletion"] = np.nan
+
+    # Add timestamp
+    db["timestamp"] = date
+    return db
 
 
 def parse(base, desc):
@@ -183,13 +209,55 @@ def parse(base, desc):
     return db
 
 
-def run():
+def run_online():
+    """
+        Executes various functions to update data.csv from Sreality.cz.
+        Works in this order: finds new listings and their details, finds and marks deleted listings,
+        merges and saves to data.csv
+    """
+
+    master_db = None
+    try:
+        master_db = pd.read_csv("data.csv")
+        print("Found data.csv")
+    except FileNotFoundError:
+        print("No such file data.csv. No matching possible. Creating data.csv")
+    print("Finding all listings from Sreality.cz")
     df_base = get_all_sreality()
-    df_desc = get_all_description(df_base)
-    return parse(df_base, df_desc)
 
+    if master_db is None:
+        print("Found "+ str(df_base.shape[0]) + " listings")
+        df_desc = get_all_description(df_base)
+        print("Found details of " + str(df_desc.shape[0]) + " listings")
+        master_db = parse(df_base, df_desc)
+    else:
+        new_ids = df_base[~df_base["code"].isin(master_db["code"])]
+        print("Found " + str(new_ids.shape[0]) + " new listings")
+        print("Getting their details")
+        if len(new_ids) != 0:
+            new_ids_desc = get_all_description(new_ids)
+            new_ids_complete = parse(new_ids, new_ids_desc)
 
+        master_db_not_deleted = master_db[master_db["deleted"]==0]
+        master_db_not_deleted_code = master_db_not_deleted.code
+        df_base_code = df_base.code
+        deleted = master_db_not_deleted_code[~master_db_not_deleted_code.isin(df_base_code)]
 
+        def mark_if_deleted(db):
+            if db["code"] in deleted.values:
+                db["deleted"] = 1
+                db["time of deletion"] = str(date)
+            return db
+        master_db = master_db.apply(mark_if_deleted, axis = 1)
 
+        print(str(deleted.shape[0]) + " listings have been marked deleted")
 
-# TODO: matching, saving to csv
+        if len(new_ids) != 0:
+            master_db = pd.concat([master_db, new_ids_complete])
+
+    # Check if there are duplicates in master_db
+    print("Found " + str(master_db[master_db["code"].duplicated()].shape[0]) + " duplicated values")
+
+    print("Saving to data.csv")
+    master_db.to_csv("data.csv", index = False)
+    # TODO: update from file and backup current file
