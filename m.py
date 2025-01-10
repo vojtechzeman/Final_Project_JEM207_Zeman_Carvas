@@ -23,8 +23,8 @@ def count_materials(json_file_path):
             """Rekurzivně prochází strukturu a hledá klíč 'material'"""
             if isinstance(item, dict):
                 # Pokud najdeme klíč 'material', přičteme jeho hodnotu
-                if "energy_efficiency_rating_cb" in item:
-                    material_type = item["energy_efficiency_rating_cb"]
+                if "age_of_building" in item:
+                    material_type = item["age_of_building"]
                     # Pokud je hodnota číslo, přičteme ji
                     value = 1  # Výchozí hodnota, pokud není specifikováno
                     if "quantity" in item:
@@ -62,7 +62,7 @@ def count_materials(json_file_path):
 # Příklad použití:
 if __name__ == "__main__":
     # Změňte cestu k vašemu JSON souboru
-    file_path = "data/processed/sale2.json"
+    file_path = "data/raw/deleted_listings_rent.json"
     results = count_materials(file_path)
     
     # Výpis výsledků

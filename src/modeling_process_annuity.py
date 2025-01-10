@@ -10,7 +10,7 @@ class AnnuityProcessor:
 
     def process_data_annuity(self) -> None:
         """
-        Adding annuity information to non-private items from item description.
+        Update prices of non-private items with annuities (information got from item description).
 
         """
 
@@ -18,7 +18,6 @@ class AnnuityProcessor:
         # Load JSON
         with open("data/processed/sale.json", 'r', encoding='utf-8') as file:
             data = json.load(file)
-
 
 
         # ANNUITY FOR NON PRIVATE APARTMENTS
@@ -78,12 +77,11 @@ class AnnuityProcessor:
 
         print("Processing...")
         for item in data:
-            # Find sentences containing "anuit" or "odstup"
+            # Application of find_sentences_with_anuit() and find_annuity() functions
             if item["annuity"] == 1:
                 sentences = find_sentences_with_anuit(item["description"])
                 item["sentences"] = sentences
 
-                # Find amounts in sentences containing "anuit" or "odstup"
                 amounts = find_annuity(sentences)
                 item["amounts"] = amounts
 
@@ -198,7 +196,7 @@ class AnnuityProcessor:
                 item["annuity"] = 0
 
 
-        KEYS_TO_REMOVE = {"annuity", "description", "floor_area"}
+        KEYS_TO_REMOVE = {"annuity", "description"}
         data = [{k: v for k, v in item.items() if k not in KEYS_TO_REMOVE} for item in data]
 
         # Deletion of non-private ownership with suspicious prices

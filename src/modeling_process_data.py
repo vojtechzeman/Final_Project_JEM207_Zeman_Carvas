@@ -1,34 +1,89 @@
 import json
 import csv
 import pandas as pd
+import re
 
 
 class DataProcessor:
     def __init__(self) -> None:
         pass
 
-    def process_data(self) -> None:
+    def process_data(self, process_sale: bool = False, process_rent: bool = False) -> None:
         """
-        Merging data from .json and .csv
-        Removal of unnecessary keys
-        Timestamp to date
+        price
+        usable_area (missing values got from meta_description, if usable_area > floor_area, exchange them)
+        garage
+        cellar
+        low_energy (nizkoenergetický)
+        balcony
+        easy_access (no barriers)
+        terrace
+        loggia
+        parking_lots
+        date (timestamp to date)
+        elevator (got from meta_description)
+        material_brick
+        material_panel
+        Prague_1 (find missing districts using Prague_street_database.csv)
+        Prague_2
+        Prague_3
+        Prague_4
+        Prague_5
+        Prague_6
+        Prague_7
+        Prague_8
+        Prague_9
+        floor_ground
+        floor_above_ground
+        status_good (dobrý, špatný, k demolici)
+        status_very_good
+        status_before_reconstruction (před rekonstrukcí, v rekonstrukci)
+        status_after_reconstruction
+        status_project
+        status_under_construction
+        kitchen_separately (+1 vs +kk)
+        ownership_private
+        non-residential_unit (description contains "nebyt|nebytu|nebytový|ateli[eé]r")
 
-        ...
+        RENT:
+        furnished
+        ownership_private - deleted
+        status_before_reconstruction - deleted
+        status_project - deleted
+        status_under_construction - deleted
 
         """
+
+        if not process_sale and not process_rent:
+            return
+
+        if process_sale and process_rent:
+            raise ValueError("Only one of process_sale or process_rent can be True")
 
         # Load JSON
-        with open("data/raw/deleted_listings_sale.json", 'r', encoding='utf-8') as file:
-            data = json.load(file)
+        if process_sale:
+            with open("data/raw/deleted_listings_sale.json", 'r', encoding='utf-8') as file:
+                data = json.load(file)
+        elif process_rent:
+            with open("data/raw/deleted_listings_rent.json", 'r', encoding='utf-8') as file:
+                data = json.load(file)
 
         # Load prices from CSV
         prices = {}
-        with open("data/raw/deleted_listings_sale.csv", 'r', encoding='utf-8') as file:
-            next(file)  # Skip header
-            csv_reader = csv.reader(file, delimiter=';')
-            for row in csv_reader:
-                code, price, _ = row  # _ ignores timestamp
-                prices[code] = int(price)
+        if process_sale:
+            with open("data/raw/deleted_listings_sale.csv", 'r', encoding='utf-8') as file:
+                next(file)  # Skip header
+                csv_reader = csv.reader(file, delimiter=';')
+                for row in csv_reader:
+                    code, price, _ = row  # _ ignores timestamp
+                    prices[code] = int(price)
+        elif process_rent:
+            with open("data/raw/deleted_listings_rent.csv", 'r', encoding='utf-8') as file:
+                next(file)  # Skip header
+                csv_reader = csv.reader(file, delimiter=';')
+                for row in csv_reader:
+                    code, price, _ = row  # _ ignores timestamp
+                    prices[code] = int(price)
 
         # Add prices to data
         for item in data:
@@ -61,12 +116,20 @@ class DataProcessor:
             "locality_ward_id",
             "object_kind",
             "object_type",
-            "furnished",
             "energy_efficiency_rating_cb",
             "code"
         }
 
         cleaned_data = [{k: v for k, v in item.items() if k not in KEYS_TO_REMOVE} for item in data]
+        if process_sale:
+            cleaned_data = [{k: v for k, v in item.items() if k != "furnished"} for item in cleaned_data]
+        if process_rent:
+            cleaned_data = [{k: v for k, v in item.items() if k != "ownership"} for item in cleaned_data]
+
+
+
+        # Delete items with "price": 1
+        cleaned_data = [item for item in cleaned_data if item["price"] != 1]
 
 
         # Process data
@@ -77,7 +140,6 @@ class DataProcessor:
             del item['timestamp']
 
             # Missing usable_area data
-
             try:
                 if item['meta_description'].split()[2] == "pokojů":
                     item['usable_area'] = int(float(item['meta_description'].split()[5]))
@@ -105,7 +167,10 @@ class DataProcessor:
                 if ";" not in item["meta_description"].split(",")[0]:
                     text = item["meta_description"].split(",")[0]
                     text = text.split()
-                    ulice = text[text.index("prodeji") + 1:]
+                    if process_sale:
+                        ulice = text[text.index("prodeji") + 1:]
+                    elif process_rent:
+                        ulice = text[text.index("pronájmu") + 1:]
                     ulice = " ".join(ulice)
                     
                     # Find the street name in the database
@@ -127,11 +192,12 @@ class DataProcessor:
             # Remove unnecessary keys
             del item['meta_description']
 
-        # Delete items with "price": 1
-        cleaned_data = [item for item in cleaned_data if item["price"] != 1]
 
         # Delete NAs in usable_area
         cleaned_data = [item for item in cleaned_data if item["usable_area"] is not None]
+        # Delete floor_area
+        cleaned_data = [{k: v for k, v in item.items() if k != "floor_area"} for item in cleaned_data]
+
 
 
         print("Processing...")
@@ -207,37 +273,57 @@ class DataProcessor:
             del item['floor']
 
             # Condition dummy (dobrý, velmi dobrý, před rekonstrukcí, po rekonstrukci, projekt, ve výstavbě, novostavba)
-            if item["age_of_building"] in ["Dobrý", "Špatný", "K demolici"]:
-                item["status_good"] = 1
-            else:
-                item["status_good"] = 0
+            if process_sale:
+                if item["age_of_building"] in ["Dobrý", "Špatný", "K demolici"]:
+                    item["status_good"] = 1
+                else:
+                    item["status_good"] = 0
 
-            if item["age_of_building"] == "Velmi dobrý":
-                item["status_very_good"] = 1
-            else:
-                item["status_very_good"] = 0
+                if item["age_of_building"] == "Velmi dobrý":
+                    item["status_very_good"] = 1
+                else:
+                    item["status_very_good"] = 0
 
-            if item["age_of_building"] in ["Před rekonstrukcí", "V rekonstrukci"]:
-                item["status_before_reconstruction"] = 1
-            else:
-                item["status_before_reconstruction"] = 0
-            
-            if item["age_of_building"] == "Po rekonstrukci":
-                item["status_after_reconstruction"] = 1
-            else:
-                item["status_after_reconstruction"] = 0
+                if item["age_of_building"] in ["Před rekonstrukcí", "V rekonstrukci"]:
+                    item["status_before_reconstruction"] = 1
+                else:
+                    item["status_before_reconstruction"] = 0
+                
+                if item["age_of_building"] == "Po rekonstrukci":
+                    item["status_after_reconstruction"] = 1
+                else:
+                    item["status_after_reconstruction"] = 0
 
-            if item["age_of_building"] == "Projekt":
-                item["status_project"] = 1
-            else:
-                item["status_project"] = 0
-            
-            if item["age_of_building"] == "Ve výstavbě":
-                item["status_under_construction"] = 1
-            else:
-                item["status_under_construction"] = 0
+                if item["age_of_building"] == "Projekt":
+                    item["status_project"] = 1
+                else:
+                    item["status_project"] = 0
+                
+                if item["age_of_building"] == "Ve výstavbě":
+                    item["status_under_construction"] = 1
+                else:
+                    item["status_under_construction"] = 0
 
-            del item['age_of_building']
+                del item['age_of_building']
+
+            # Condition dummy (dobrý, velmi dobrý, po rekonstrukci, novostavba)
+            if process_rent:
+                if item["age_of_building"] in ["Dobrý", "Špatný", "K demolici", "Před rekonstrukcí"]:
+                    item["status_good"] = 1
+                else:
+                    item["status_good"] = 0
+
+                if item["age_of_building"] == "Velmi dobrý":
+                    item["status_very_good"] = 1
+                else:
+                    item["status_very_good"] = 0
+
+                if item["age_of_building"] in ["Po rekonstrukci", "V rekonstrukci"]:
+                    item["status_after_reconstruction"] = 1
+                else:
+                    item["status_after_reconstruction"] = 0
+
+                del item['age_of_building']
 
 
         print("Processing...")
@@ -251,23 +337,55 @@ class DataProcessor:
             del item['category_sub_cb']
 
             # Ownership_private dummy
-            if item["ownership"] in [1, 3]:
-                item["ownership_private"] = 1
-            else:
-                item["ownership_private"] = 0
-            del item['ownership']
+            if process_sale:
+                if item["ownership"] in [1, 3]:
+                    item["ownership_private"] = 1
+                else:
+                    item["ownership_private"] = 0
 
             # nebytová jednotka
-            if "nebyt" in item["description"] or "nebytu" in item["description"] or "nebytový" in item["description"] or "atelier" in item["description"] or "ateliér" in item["description"]:
-                item["non-residential_unit"] = 1
+            if re.search(r"nebyt|nebytu|nebytový|ateli[eé]r", item["description"].lower()):
+                item["nonresidential_unit"] = 1
             else:
-                item["non-residential_unit"] = 0
+                item["nonresidential_unit"] = 0
 
+            # Furnished dummy
+            if process_rent:
+                if item["furnished"] == 1:
+                    item["fully_furnished"] = 1
+                else:
+                    item["fully_furnished"] = 0
+
+                if item["furnished"] == 3:
+                    item["partially_furnished"] = 1
+                else:
+                    item["partially_furnished"] = 0
+                
+                del item['furnished']
+
+
+        # Delete date
+        cleaned_data = [{k: v for k, v in item.items() if k != "date"} for item in cleaned_data]
+
+        # Delete description
+        if process_rent:
+            cleaned_data = [{k: v for k, v in item.items() if k != "description"} for item in cleaned_data]
+            cleaned_data = [{k: v for k, v in item.items() if k != "timestamp"} for item in cleaned_data]
 
 
         # Save result
-        with open("data/processed/sale.json", 'w', encoding='utf-8') as file:
-            json.dump(cleaned_data, file, indent=2, ensure_ascii=False)
+        if process_sale:
+            with open("data/processed/sale.json", 'w', encoding='utf-8') as file:
+                json.dump(cleaned_data, file, indent=2, ensure_ascii=False)
+        elif process_rent:
+            df = pd.DataFrame(cleaned_data)
+            desired_order = ['price', 'usable_area']
+            other_columns = [col for col in df.columns if col not in desired_order]
+            final_order = desired_order + other_columns
+            df = df[final_order]
+            df.to_csv("data/processed/rent.csv", index=False, encoding='utf-8', sep=";")
+
+
 
         print(f"Successfully processed data")
 
