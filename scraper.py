@@ -1,13 +1,18 @@
 """
     Scraper for the project. Uses Sreality.cz for gathering the data.
+    Run by calling run(arg) (see run() description)
+    Operates with data.csv
 """
 
 import requests # for making HTTP requests
 import pandas as pd
 import numpy as np
 import time
+from datetime import datetime
 import random
 
+# Get current date
+date =  datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
 # Use headers as Sreality.cz obfuscates prices
 headers_user = {"User-Agent": "Mozilla/5.0"}
@@ -104,6 +109,11 @@ def convert_description_to_df(json_data):
     for item in json_data["items"]:
         if item["name"] in itemRenameTable:
             db[itemRenameTable[item["name"]]] = item["value"]
+            del itemRenameTable[item["name"]]
+
+    # Make sure all columns are filled either with data or NaN
+    for item_left in itemRenameTable:
+        db[itemRenameTable[item_left]] = np.nan
     # endregion
 
     return db
@@ -134,12 +144,15 @@ def get_all_sreality(category_type: int=1):
 
 def get_all_description(db):
     list_of_dfs = []
+    iter = 1
 
     for code in list(db["code"]):
         json_data = get_description(code)
         if len(json_data) == 1:
-            pass # Invalid code TODO: Throw error?
+            continue  # Invalid code
+        print("Getting details (" + str(iter) + ")")
         list_of_dfs.append(convert_description_to_df(json_data))
+        iter += 1
 
     return pd.concat(list_of_dfs)
 
@@ -173,8 +186,14 @@ def clean(db):
 
     db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
                   str(db["code"]))
-    return db
 
+    # Add columns for matching deleted adverts
+    db["deleted"] = 0
+    db["time of deletion"] = np.nan
+
+    # Add timestamp
+    db["timestamp"] = date
+    return db
 
 
 def parse(base, desc):
@@ -183,13 +202,49 @@ def parse(base, desc):
     return db
 
 
-def run():
-    df_base = get_all_sreality()
-    df_desc = get_all_description(df_base)
-    return parse(df_base, df_desc)
+def run(task):
+    if task == "update":
+        master_db = None
+        try:
+            master_db = pd.read_csv("data.csv")
+            print("Found data.csv")
+        except FileNotFoundError:
+            print("No such file: 'data.csv'. No matching possible. Creating data.csv")
+        print("Finding all listings from Sreality.cz")
+        df_base = get_all_sreality()
 
+        if master_db is None:
+            df_desc = get_all_description(df_base)
+            print("Found " + str(df_desc.shape[0]) + " listings")
+            master_db = parse(df_base, df_desc)
+        else:
+            new_ids = df_base[~df_base["code"].isin(master_db["code"])]
+            print("Found " + str(new_ids.shape[0]) + " new listings")
+            print("Getting their details")
+            if len(new_ids) != 0:
+                new_ids_desc = get_all_description(new_ids)
+                new_ids_complete = parse(new_ids, new_ids_desc)
 
+            master_db_not_deleted = master_db[master_db["deleted"]==0]
+            master_db_not_deleted_code = master_db_not_deleted.code
+            df_base_code = df_base.code
+            deleted = master_db_not_deleted_code[~master_db_not_deleted_code.isin(df_base_code)]
 
+            def mark_if_deleted(db):
+                if db["code"] in deleted.values:
+                    db["deleted"] = 1
+                    db["time of deletion"] = str(date)
+                return db
+            master_db = master_db.apply(mark_if_deleted, axis = 1)
 
+            print(str(deleted.shape[0]) + " listings have been marked deleted")
 
-# TODO: matching, saving to csv
+            if len(new_ids) != 0:
+                master_db = pd.concat([master_db, new_ids_complete])
+
+        # Check if there are duplicates in master_db
+        print("Found " + str(master_db[master_db["code"].duplicated()].shape[0]) + " duplicated values")
+
+        print("Saving to data.csv")
+        master_db.to_csv("data.csv", index = False)
+    # TODO: update from file and backup current file
