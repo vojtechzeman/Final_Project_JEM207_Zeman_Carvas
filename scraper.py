@@ -93,7 +93,7 @@ def convert_description_to_df(json_data):
     for element, func in elementRenameTable.items():
         try:
             db[element] = [func()]
-        except KeyError as exc:
+        except KeyError:
             db[element] = [np.nan]
 
     itemRenameTable = {
@@ -107,6 +107,7 @@ def convert_description_to_df(json_data):
         "Užitná ploch": "usable_area",
         "Plocha podlahová": "floor_area",
         "Celková plocha": "total_area",
+        "Výtah": "elevator",
         "Energetická náročnost budovy": "energy_efficiency_rating",
         "Bezbariérový": "no_barriers",
         "Datum zahájení prodeje": "start_of_offer"
