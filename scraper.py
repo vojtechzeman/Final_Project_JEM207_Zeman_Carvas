@@ -11,6 +11,12 @@ import time
 from datetime import datetime
 import random
 
+# Declare option to buy or to rent
+intention = {
+    "buy": 1,
+    "rent": 2
+}
+
 # Get current date
 date =  datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
@@ -126,7 +132,7 @@ def convert_description_to_df(json_data):
     return db
 
 
-def get_all_sreality(category_type: int=1):
+def get_all_sreality(category_type: int):
     page = 1
     list_of_dfs = []
 
@@ -188,8 +194,12 @@ def clean(db):
         intent = meta_desc.split()[5]
         size = meta_desc.split()[1]
 
-    if intent == "prodeji":
-        intent = "prodej"
+    correction_table = {
+        "prodeji": "prodej",
+        "pronájmu": "pronajem"
+        }
+
+    intent = correction_table(intent)
 
     db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
                   str(db["code"]))
@@ -209,21 +219,27 @@ def parse(base, desc):
     return db
 
 
-def run_online():
+def run_online(intent):
     """
-        Executes various functions to update data.csv from Sreality.cz.
-        Works in this order: finds new listings and their details, finds and marks deleted listings,
-        merges and saves to data.csv
-    """
+        Executes various functions to update buy.json or rent.json from Sreality.cz.
+        :param intent: either "buy" or "rent"
 
+
+        Works in this order: finds new listings and their details, finds and marks deleted listings,
+        merges and saves to either buy.json or rent.json.
+    """
+    if intent not in ["buy", "rent"]:
+        raise ValueError(f"""arg has to be either "buy" or "rent", not: {intent}""")
+
+    cb_type = intention[intent]
     master_db = None
     try:
-        master_db = pd.read_csv("data.csv")
-        print("Found data.csv")
+        master_db = pd.read_json(f"last_scraping_for_modeling/{intent}.json")
+        print(f"Found {intent}.json")
     except FileNotFoundError:
-        print("No such file data.csv. No matching possible. Creating data.csv")
+        print(f"No such file {intent}.json. No matching possible. Creating {intent}.json")
     print("Finding all listings from Sreality.cz")
-    df_base = get_all_sreality()
+    df_base = get_all_sreality(cb_type)
 
     if master_db is None:
         print("Found "+ str(df_base.shape[0]) + " listings")
@@ -258,6 +274,6 @@ def run_online():
     # Check if there are duplicates in master_db
     print("Found " + str(master_db[master_db["code"].duplicated()].shape[0]) + " duplicated values")
 
-    print("Saving to data.csv")
-    master_db.to_csv("data.csv", index = False)
+    print(f"Saving to {intent}.json")
+    master_db.to_json(f"last_scraping_for_modeling/{intent}.json", index = False)
     # TODO: update from file and backup current file
