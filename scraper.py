@@ -153,7 +153,7 @@ def get_all_sreality(category_type: int, times = 3):
     db.drop_duplicates(subset=["hash_id"], inplace=True)
 
     # Remove adverts costing 1 CZK
-    db.drop(db[db.price == 1].index).reset_index(drop=True, inplace=True)
+    db.drop(db[db.price == 1].index, inplace=True)
 
     # Change id to code as it will be used for matching
     db.rename(columns={'hash_id':'code'}, inplace=True)
@@ -249,6 +249,8 @@ def run_online(intent):
 
     cb_type = intention[intent]
     master_db = None
+
+    # Check if buy.json or rent.json exist
     try:
         master_db = pd.read_json(f"last_scraping_for_modeling/{intent}.json")
         print(f"Found {intent}.json")
@@ -263,6 +265,7 @@ def run_online(intent):
         print("Found details of " + str(df_desc.shape[0]) + " listings")
         master_db = parse(df_base, df_desc)
     else:
+        # Only find details for where they are missing
         new_ids = df_base[~df_base["code"].isin(master_db["code"])]
         print("Found " + str(new_ids.shape[0]) + " new listings")
         print("Getting their details")
@@ -270,24 +273,36 @@ def run_online(intent):
             new_ids_desc = get_all_description(new_ids)
             new_ids_complete = parse(new_ids, new_ids_desc)
 
-        master_db_not_deleted = master_db[master_db["deleted"]==0]
-        master_db_not_deleted_code = master_db_not_deleted.code
+        # Check for deleted listings and save them to deleted_{intent}.json
+        master_db_code = master_db.code
         df_base_code = df_base.code
-        deleted = master_db_not_deleted_code[~master_db_not_deleted_code.isin(df_base_code)]
-
+        deleted_new = master_db[~master_db_code.isin(df_base_code)]
         def mark_if_deleted(db):
-            if db["code"] in deleted.values:
-                db["deleted"] = 1
-                db["time of deletion"] = str(date)
+            db["time of deletion"] = str(date)
             return db
-        master_db = master_db.apply(mark_if_deleted, axis = 1)
+        deleted_new = deleted_new.apply(mark_if_deleted, axis = 1)
+        print(f"{deleted_new.shape[0]} listings have been deleted")
+        if deleted_new.shape[0] > 0:
+            try:
+                deleted_db = pd.read_json(f"data/raw/deleted_{intent}.json")
+                print(f"Found deleted_{intent}.json")
+                deleted_db = pd.concat([deleted_db, deleted_new])
+            except FileNotFoundError:
+                print(f"No such file deleted_{intent}.json. Creating deleted_{intent}.json")
+                deleted_db = deleted_new
 
-        print(str(deleted.shape[0]) + " listings have been marked deleted")
+            print(f"Saving deleted_{intent}.json")
+            deleted_db.reset_index(drop=True, inplace=True)
+            deleted_db.to_json(f"data/raw/deleted_{intent}.json")
+            # Finally remove delete listings from master
+            master_db = master_db[master_db_code.isin(df_base_code)]
 
+
+        # Add new listings if there are some
         if len(new_ids) != 0:
             master_db = pd.concat([master_db, new_ids_complete])
 
-    # Check if there are duplicates in master_db
+    # Check if there are duplicates in master_db and raise error
     duplicates = master_db[master_db["code"].duplicated()].shape[0]
     if duplicates > 0:
         raise pd.errors.DuplicateLabelError(f"Found {duplicates} duplicated values")
