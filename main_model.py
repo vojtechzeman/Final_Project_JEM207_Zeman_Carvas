@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # What type of data do you want to process?
     # "sale" / "rent" / "-"
-    data_type_2 = 'rent'
+    data_type_2 = 'sale'
     check = input("Did you check the model history? (yes/no): ")
  
     if check == "yes":

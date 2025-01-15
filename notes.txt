@@ -7,4 +7,4 @@ mega problém s usable_area, občas to nevyscrapuje
 taky mega problém s floor_area
 chybí i výtah
 
-
+gradient boosting
