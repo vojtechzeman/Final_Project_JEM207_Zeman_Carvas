@@ -53,8 +53,8 @@ def get_description(code):
     return r.json()
 
 
-def convert_sreality_to_df(data):
-    return pd.DataFrame(data['_embedded']['estates'])
+def convert_sreality_to_df(json_data):
+    return pd.DataFrame(json_data['_embedded']['estates'])
 
 
 def convert_description_to_df(json_data):
@@ -132,27 +132,43 @@ def convert_description_to_df(json_data):
     return db
 
 
-def get_all_sreality(category_type: int):
-    page = 1
-    list_of_dfs = []
+def get_all_sreality(category_type: int, times = 3):
 
-    while True:
-        json_data = get_sreality(category_type, page)
-        if len(json_data['_embedded']['estates']) == 0:
-            break
-        list_of_dfs.append(convert_sreality_to_df(json_data))
-        page += 1
+    list_of_dbs = []
 
-    # Create DataFrame
-    db = pd.concat(list_of_dfs)
+    for i in range(times):
+        list_of_dfs = []
+        page = 1
+        while True:
+            json_data = get_sreality(category_type, page)
+            if len(json_data['_embedded']['estates']) == 0:
+                break
+            list_of_dfs.append(convert_sreality_to_df(json_data))
+            page += 1
+        list_of_dbs.append(pd.concat(list_of_dfs))
+
+
+    db = pd.concat(list_of_dbs)
+
+    db.drop_duplicates(subset=["hash_id"], inplace=True)
 
     # Remove adverts costing 1 CZK
-    db = db.drop(db[db.price == 1].index).reset_index(drop=True)
+    db.drop(db[db.price == 1].index).reset_index(drop=True, inplace=True)
 
     # Change id to code as it will be used for matching
     db.rename(columns={'hash_id':'code'}, inplace=True)
 
-    return db[["code", "price"]].join(pd.json_normalize(db["seo"])["locality"])
+    # Get first image from nested dict in _links
+    image = pd.json_normalize(pd.json_normalize(pd.json_normalize(db["_links"])["images"])[0]).rename(columns={"href": "image"})
+
+    # Get locality from dict seo for creating links later
+    locality = pd.json_normalize(db["seo"])["locality"]
+
+    # Extract code and price
+    db = db[["code", "price"]]
+
+    db = db.reset_index(drop=True)
+    return pd.concat([db, image, locality], axis = 1)
 
 
 def get_all_description(db):
@@ -199,7 +215,7 @@ def clean(db):
         "pronájmu": "pronajem"
         }
 
-    intent = correction_table(intent)
+    intent = correction_table[intent]
 
     db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
                   str(db["code"]))
@@ -272,8 +288,12 @@ def run_online(intent):
             master_db = pd.concat([master_db, new_ids_complete])
 
     # Check if there are duplicates in master_db
-    print("Found " + str(master_db[master_db["code"].duplicated()].shape[0]) + " duplicated values")
+    duplicates = master_db[master_db["code"].duplicated()].shape[0]
+    if duplicates > 0:
+        raise pd.errors.DuplicateLabelError(f"Found {duplicates} duplicated values")
 
+    # Save to json
     print(f"Saving to {intent}.json")
+    master_db.reset_index(drop=True, inplace=True)
     master_db.to_json(f"last_scraping_for_modeling/{intent}.json", index = False)
     # TODO: update from file and backup current file
