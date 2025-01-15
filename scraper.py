@@ -1,7 +1,7 @@
 """
     Scraper for the project. Uses Sreality.cz for gathering the data.
-    Run by calling run_online() (see run() description)
-    Operates with data.csv
+    Run by calling run_online() (see run_online() description)
+    Operates with buy.json and rent.json
 """
 
 import requests # for making HTTP requests
