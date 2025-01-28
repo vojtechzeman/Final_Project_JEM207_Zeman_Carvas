@@ -24,14 +24,17 @@ date =  datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 headers_user = {"User-Agent": "Mozilla/5.0"}
 
 
-def get_sreality(category_type, page, category_main = 1, locality_region = 10):
-    base_url = ("https://www.sreality.cz/api/cs/v2/estates?category_main_cb=" + str(category_main) + "&category_type_cb="
-                + str(category_type) + "&locality_region_id=" + str(locality_region) + "&per_page=33&page=" + str(page))
+def get_sreality(category_type, category_main = 1, locality_region = 10):
+    get_estates = lambda x : f"https://www.sreality.cz/api/v1/estates/search?category_main_cb={category_main}&category_type_cb={category_type}&locality_region_id={locality_region}&limit={x}"
     r_sleep = random.uniform(1.01, 1.81)
     time.sleep(r_sleep)
 
+    total = requests.get(get_estates(1), headers = headers_user).json()["pagination"]["total"]
+
+    print(f"found {total} lisitings")
+
     try:
-        r = requests.get(base_url, headers = headers_user)
+        r = requests.get(get_estates(10), headers = headers_user)
     except requests.exceptions.RequestException as e:
         print(e)
         return None
@@ -53,10 +56,6 @@ def get_description(code):
     return r.json()
 
 
-def convert_sreality_to_df(json_data):
-    return pd.DataFrame(json_data['_embedded']['estates'])
-
-
 def convert_description_to_df(json_data):
     db = pd.DataFrame()
 
@@ -74,6 +73,7 @@ def convert_description_to_df(json_data):
     "locality_gps_lon": lambda: float(json_data["recommendations_data"]["locality_gps_lon"]),
     "object_type": lambda: int(json_data["recommendations_data"]["object_type"]),
     "parking_lots": lambda: int(json_data["recommendations_data"]["parking_lots"]),
+    "locality_seo": lambda: str(json_data["seo"]["locality"]),
     "locality_street_id": lambda: int(json_data["recommendations_data"]["locality_street_id"]),
     "locality_district_id": lambda: int(json_data["recommendations_data"]["locality_district_id"]),
     "locality_ward_id": lambda: int(json_data["recommendations_data"]["locality_ward_id"]),
@@ -113,17 +113,22 @@ def convert_description_to_df(json_data):
         "Užitná ploch": "usable_area",
         "Plocha podlahová": "floor_area",
         "Celková plocha": "total_area",
+        "Balkón":"balcony_area",
+        "Sklep":"cellar_area",
+        "Lodžie" : "loggia_area",
         "Výtah": "elevator",
         "Energetická náročnost budovy": "energy_efficiency_rating",
         "Bezbariérový": "no_barriers",
         "Datum zahájení prodeje": "start_of_offer"
     }
 
-    for item in json_data["items"]:
-        if item["name"] in itemRenameTable:
-            db[itemRenameTable[item["name"]]] = item["value"]
-            del itemRenameTable[item["name"]]
-
+    try:
+        for item in json_data["items"]:
+            if item["name"] in itemRenameTable:
+                db[itemRenameTable[item["name"]]] = item["value"]
+                del itemRenameTable[item["name"]]
+    except KeyError:
+        pass
     # Make sure all columns are filled either with data or NaN
     for item_left in itemRenameTable:
         db[itemRenameTable[item_left]] = np.nan
@@ -134,54 +139,41 @@ def convert_description_to_df(json_data):
 
 def get_all_sreality(category_type: int, times = 3):
 
-    list_of_dbs = []
 
-    for i in range(times):
-        list_of_dfs = []
-        page = 1
-        while True:
-            json_data = get_sreality(category_type, page)
-            if len(json_data['_embedded']['estates']) == 0:
-                break
-            list_of_dfs.append(convert_sreality_to_df(json_data))
-            page += 1
-        list_of_dbs.append(pd.concat(list_of_dfs))
+    json_data = get_sreality(category_type)
+    if len(json_data['results']) == 0:
+        raise LookupError("empty results, wrong api request")
 
-
-    db = pd.concat(list_of_dbs)
+    db = pd.DataFrame(json_data["results"])
 
     db.drop_duplicates(subset=["hash_id"], inplace=True)
 
     # Remove adverts costing 1 CZK
-    db.drop(db[db.price == 1].index, inplace=True)
-
-    # Change id to code as it will be used for matching
-    db.rename(columns={'hash_id':'code'}, inplace=True)
+    db.drop(db[db.price <= 1].index, inplace=True)
 
     # Get first image from nested dict in _links
-    image = pd.json_normalize(pd.json_normalize(pd.json_normalize(db["_links"])["images"])[0]).rename(columns={"href": "image"})
-
-    # Get locality from dict seo for creating links later
-    locality = pd.json_normalize(db["seo"])["locality"]
+    db["image"] = db.advert_images.apply(lambda x: "https:" + x[0] + "?fl=res,400,300,3|shr,,20|jpg,90")
 
     # Extract code and price
-    db = db[["code", "price"]]
+    db = db[["hash_id", "price_czk", "image"]]
 
-    db = db.reset_index(drop=True)
-    return pd.concat([db, image, locality], axis = 1)
+    # Change id to code as it will be used for matching
+    db.rename(columns={'hash_id':'code', "price_czk": "price"}, inplace=True)
+    db = db.convert_dtypes().reset_index(drop=True).dropna(subset=["code"])
+    return db
 
 
 def get_all_description(db):
     list_of_dfs = []
-    iter = 1
+    iteration = 1
 
     for code in list(db["code"]):
         json_data = get_description(code)
         if len(json_data) == 1:
             continue  # Invalid code
-        print("Getting details (" + str(iter) + ")")
+        print("Getting details (" + str(iteration) + ")")
         list_of_dfs.append(convert_description_to_df(json_data))
-        iter += 1
+        iteration += 1
 
     return pd.concat(list_of_dfs)
 
@@ -201,27 +193,28 @@ def clean(db):
         db["energy_efficiency_description"] = db["energy_efficiency_rating"] = np.nan
 
     # Add link column
-    meta_desc = str(db["meta_description"])
-    cat = meta_desc.split()[0].lower()
-    if meta_desc.split()[1] == "atypické":
-        intent = meta_desc.split()[6]
-        size = "atypicky"
-    else:
-        intent = meta_desc.split()[5]
-        size = meta_desc.split()[1]
+    try:
+        meta_desc = str(db["meta_description"])
+        cat = meta_desc.split()[0].lower()
+        if meta_desc.split()[1] == "atypické":
+            intent = meta_desc.split()[6]
+            size = "atypicky"
+        else:
+            intent = meta_desc.split()[5]
+            size = meta_desc.split()[1]
 
-    correction_table = {
-        "prodeji": "prodej",
-        "pronájmu": "pronajem"
-        }
+        correction_table = {
+            "prodeji": "prodej",
+            "pronájmu": "pronajem"
+            }
 
-    intent = correction_table[intent]
+        intent = correction_table[intent]
 
-    db["link"] = ("https://www.sreality.cz/detail/" + intent + "/" + cat + "/" + size + "/" + db["locality"] + "/" +
-                  str(db["code"]))
+        db["link"] = f"https://www.sreality.cz/detail/{intent}/{cat}/{size}/{db["locality_seo"]}/{db["code"]}"
+    except IndexError:
+        db["link"] = np.nan
 
     # Add columns for matching deleted adverts
-    db["deleted"] = 0
     db["time of deletion"] = np.nan
 
     # Add timestamp
