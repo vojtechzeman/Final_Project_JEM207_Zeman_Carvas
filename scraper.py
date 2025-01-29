@@ -41,7 +41,7 @@ def get_sreality(category_type, category_main = 1, locality_region = 10):
 
     total = requests.get(get_estates(1), headers = headers_user).json()["pagination"]["total"]
 
-    print(f"Found {total} lisitings")
+    print(f"Found {total} listings")
 
     try:
         r = requests.get(get_estates(total+1), headers = headers_user)
@@ -185,7 +185,7 @@ def get_all_description(db):
                 continue  # Invalid code
             if iteration > 1:
                 print("\r", end="")
-            if iteration == limit_for_details:
+            if iteration == limit_for_details+1:
                 print("")
             print(f"Getting details ({iteration})", end="")
             list_of_dfs.append(convert_description_to_df(json_data))
@@ -320,12 +320,13 @@ def run_online(intent):
         df_base_code = df_base.code
         deleted_new = master_db[~master_db_code.isin(df_base_code)]
         def mark_if_deleted(db):
-            db["time of deletion"] = str(date)
+            db["time_of_deletion"] = str(date)
+            db[["time_of_deletion"]] = db[["time_of_deletion"]].astype(str)
             return db
         deleted_new = deleted_new.apply(mark_if_deleted, axis = 1)
         print(f"{deleted_new.shape[0]} listings have been deleted")
         if deleted_new.shape[0] > 0:
-            deleted_new[["time of deletion"]] =  deleted_new[["time of deletion"]].astype(str)
+            deleted_new[["time_of_deletion"]] =  deleted_new[["time_of_deletion"]].astype(str)
             try:
                 deleted_db = pd.read_json(f"data/raw/deleted_{intent}.json")
                 print(f"Found deleted_{intent}.json")
