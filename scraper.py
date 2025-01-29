@@ -11,6 +11,16 @@ import time
 from datetime import datetime
 import random
 
+#------ SETTINGS ------
+# How many details to be scraped per iteration. Most of the process time is spent on this.
+# Lower number is safer as the listings are saved each iteration but is slower.
+limit_for_details = 200
+
+# If there is a need for more iterations of scraping, should the script call itself that many times?
+recursion = True
+# ---------------------
+
+
 # Declare option to buy or to rent
 intention = {
     "buy": 1,
@@ -31,10 +41,10 @@ def get_sreality(category_type, category_main = 1, locality_region = 10):
 
     total = requests.get(get_estates(1), headers = headers_user).json()["pagination"]["total"]
 
-    print(f"found {total} lisitings")
+    print(f"Found {total} lisitings")
 
     try:
-        r = requests.get(get_estates(10), headers = headers_user)
+        r = requests.get(get_estates(total+1), headers = headers_user)
     except requests.exceptions.RequestException as e:
         print(e)
         return None
@@ -95,6 +105,7 @@ def convert_description_to_df(json_data):
     "garage": lambda: int(json_data["recommendations_data"]["garage"]),
     "room_count_cb": lambda: int(json_data["recommendations_data"]["room_count_cb"]),
     "energy_efficiency_rating_cb": lambda: int(json_data["recommendations_data"]["energy_efficiency_rating_cb"]),
+    "has_details": lambda: int(1)
     }
     for element, func in elementRenameTable.items():
         try:
@@ -137,7 +148,7 @@ def convert_description_to_df(json_data):
     return db
 
 
-def get_all_sreality(category_type: int, times = 3):
+def get_all_sreality(category_type: int):
 
 
     json_data = get_sreality(category_type)
@@ -165,66 +176,102 @@ def get_all_sreality(category_type: int, times = 3):
 
 def get_all_description(db):
     list_of_dfs = []
-    iteration = 1
 
-    for code in list(db["code"]):
-        json_data = get_description(code)
-        if len(json_data) == 1:
-            continue  # Invalid code
-        print("Getting details (" + str(iteration) + ")")
-        list_of_dfs.append(convert_description_to_df(json_data))
-        iteration += 1
+    def get_details_of_codes(codes):
+        iteration = 1
+        for code in list(codes):
+            json_data = get_description(code)
+            if len(json_data) == 1:
+                continue  # Invalid code
+            if iteration > 1:
+                print("\r", end="")
+            if iteration == limit_for_details:
+                print("")
+            print(f"Getting details ({iteration})", end="")
+            list_of_dfs.append(convert_description_to_df(json_data))
+            iteration += 1
 
-    return pd.concat(list_of_dfs)
+
+    if db["code"].shape[0] > limit_for_details:
+        required_runs = round((db["code"].shape[0] - limit_for_details)/limit_for_details)
+        print(f"Sequential scraping required as there are too many details missing. Run me {required_runs} more times")
+        get_details_of_codes(list(db["code"])[:limit_for_details])
+
+        existing_cols = pd.concat(list_of_dfs).columns
+
+        print(f"Marking the rest ({db["code"].shape[0] - limit_for_details}) as not scraped")
+        for i in list(db["code"])[limit_for_details:]:
+            # 53 as there are that many columns in the dataset
+            list_of_dfs.append(pd.DataFrame([[np.nan] * 53], columns=existing_cols))
+    else:
+        required_runs = 0
+        get_details_of_codes(list(db["code"]))
+
+    return pd.concat(list_of_dfs), required_runs
 
 
 def clean(db):
+    if db["has_details"] == 1:
+        # Energy rating cleaning
+        enrg = db["energy_efficiency_rating"]
+        if type(enrg) == str and "Třída" in enrg:
+            db["energy_efficiency_rating"] = enrg[6]
 
-    # Energy rating cleaning
-    enrg = db["energy_efficiency_rating"]
-    if type(enrg) == str and "Třída" in enrg:
-        db["energy_efficiency_rating"] = enrg[6]
-
-        if " č." in enrg:
-            db["energy_efficiency_description"] = enrg[10:enrg.find(" č.")]
+            if " č." in enrg:
+                db["energy_efficiency_description"] = enrg[10:enrg.find(" č.")]
+            else:
+                db["energy_efficiency_description"] = enrg[10:]
         else:
-            db["energy_efficiency_description"] = enrg[10:]
+            db["energy_efficiency_description"] = db["energy_efficiency_rating"] = np.nan
+
+        # Add link column
+        try:
+            meta_desc = str(db["meta_description"])
+            cat = meta_desc.split()[0].lower()
+            if meta_desc.split()[1] == "atypické":
+                intent = meta_desc.split()[6]
+                size = "atypicky"
+            elif meta_desc.split()[4] == "více":
+                intent = meta_desc.split()[8]
+                size = "6-a-vice"
+            else:
+                intent = meta_desc.split()[5]
+                size = meta_desc.split()[1]
+
+            correction_table = {
+                "prodeji": "prodej",
+                "pronájmu": "pronajem"
+                }
+
+            try:
+                intent = correction_table[intent]
+                db["link"] = f"https://www.sreality.cz/detail/{intent}/{cat}/{size}/{db["locality_seo"]}/{db["code"]}"
+            except KeyError:
+                print(meta_desc)
+                db["link"] = np.nan
+        except IndexError:
+            db["link"] = np.nan
+
+        # Add size as a column
+        db["size"] = size
+
+        # Add columns for matching deleted adverts
+        db["time_of_deletion"] = np.nan
+
+        # Add timestamp
+        db["timestamp"] = date
     else:
-        db["energy_efficiency_description"] = db["energy_efficiency_rating"] = np.nan
-
-    # Add link column
-    try:
-        meta_desc = str(db["meta_description"])
-        cat = meta_desc.split()[0].lower()
-        if meta_desc.split()[1] == "atypické":
-            intent = meta_desc.split()[6]
-            size = "atypicky"
-        else:
-            intent = meta_desc.split()[5]
-            size = meta_desc.split()[1]
-
-        correction_table = {
-            "prodeji": "prodej",
-            "pronájmu": "pronajem"
-            }
-
-        intent = correction_table[intent]
-
-        db["link"] = f"https://www.sreality.cz/detail/{intent}/{cat}/{size}/{db["locality_seo"]}/{db["code"]}"
-    except IndexError:
+        db["energy_efficiency_description"] = np.nan
         db["link"] = np.nan
-
-    # Add columns for matching deleted adverts
-    db["time of deletion"] = np.nan
-
-    # Add timestamp
-    db["timestamp"] = date
+        db["time_of_deletion"] =np.nan
+        db["timestamp"] = np.nan
     return db
 
 
 def parse(base, desc):
     db = pd.merge(base, desc, on='code')
     db = db.apply(clean, axis=1)
+    db[["timestamp"]] = db[["timestamp"]].astype(str)
     return db
 
 
@@ -253,18 +300,20 @@ def run_online(intent):
     df_base = get_all_sreality(cb_type)
 
     if master_db is None:
-        print("Found "+ str(df_base.shape[0]) + " listings")
-        df_desc = get_all_description(df_base)
+        print(f"Starting scraping details of usable {df_base.shape[0]} listings")
+        df_desc,req_runs = get_all_description(df_base)
         print("Found details of " + str(df_desc.shape[0]) + " listings")
         master_db = parse(df_base, df_desc)
     else:
         # Only find details for where they are missing
         new_ids = df_base[~df_base["code"].isin(master_db["code"])]
-        print("Found " + str(new_ids.shape[0]) + " new listings")
+        print(f"Found {new_ids.shape[0]} new listings")
         print("Getting their details")
         if len(new_ids) != 0:
-            new_ids_desc = get_all_description(new_ids)
+            new_ids_desc,req_runs = get_all_description(new_ids)
             new_ids_complete = parse(new_ids, new_ids_desc)
+        else:
+            req_runs = 0
 
         # Check for deleted listings and save them to deleted_{intent}.json
         master_db_code = master_db.code
@@ -276,6 +325,7 @@ def run_online(intent):
         deleted_new = deleted_new.apply(mark_if_deleted, axis = 1)
         print(f"{deleted_new.shape[0]} listings have been deleted")
         if deleted_new.shape[0] > 0:
+            deleted_new[["time of deletion"]] =  deleted_new[["time of deletion"]].astype(str)
             try:
                 deleted_db = pd.read_json(f"data/raw/deleted_{intent}.json")
                 print(f"Found deleted_{intent}.json")
@@ -295,6 +345,9 @@ def run_online(intent):
         if len(new_ids) != 0:
             master_db = pd.concat([master_db, new_ids_complete])
 
+    # Delete rows with NAs in code column
+    master_db.dropna(subset="code", inplace=True)
+
     # Check if there are duplicates in master_db and raise error
     duplicates = master_db[master_db["code"].duplicated()].shape[0]
     if duplicates > 0:
@@ -303,5 +356,13 @@ def run_online(intent):
     # Save to json
     print(f"Saving to {intent}.json")
     master_db.reset_index(drop=True, inplace=True)
+    master_db[["timestamp"]] = master_db[["timestamp"]].astype(str)
     master_db.to_json(f"last_scraping_for_modeling/{intent}.json", index = False)
-    # TODO: update from file and backup current file
+    print("Scraping complete")
+    if req_runs > 0:
+        print(f"Scraped data is incomplete, please run scraper {req_runs} more times")
+        if recursion:
+            print("Running scraper again")
+            run_online(intent)
+    else:
+        print("Scraped data is complete as of now, no need to run scraper again")
