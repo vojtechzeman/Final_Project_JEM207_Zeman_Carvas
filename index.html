@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podhodnecené nabídky</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            max-width: 65vw;
+            margin: 0 auto;
+        }
+        .filters { 
+            display: flex; 
+			flex-direction: column;
+            gap: 10px; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px;
+            width: 75%;
+            margin-left: auto;
+            margin-right: auto;
+            justify-content: center;
+        }
+		.filter-row {
+			display: flex;
+			gap: 10px; /* Space between filter elements */
+			flex-wrap: wrap; /* Allow wrapping if needed */
+			justify-content: center; /* Center the filters */
+		}
+        .filters input, .filters select, .filters button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .filters button { 
+            background: #007BFF; 
+            color: white; 
+            cursor: pointer; 
+        }
+        .grid { 
+            width: 75%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card { 
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        .card img { 
+            width: 266px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .card-content {
+            flex-grow: 1;
+            text-align: left;
+        }
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+			font-size: 27px
+        }
+        .card p {
+            margin: 5px 0;
+			font-size: 18px;
+        }
+        .filter-label {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="filters">
+    <!-- First Row -->
+    <div class="filter-row">
+        <div>
+            <div class="filter-label">Ulice</div>
+            <input type="text" id="search" placeholder="Zadejte název ulice...">
+        </div>
+        <div>
+            <div class="filter-label">Část Prahy</div>
+            <select id="Prague"></select>
+        </div>
+        <div>
+            <div class="filter-label">Velikost bytu</div>
+            <select id="type"></select>
+        </div>
+        <div>
+            <div class="filter-label">Maximální cena (Kč)</div>
+            <input type="number" id="maxPrice" step="1000000" min=0 placeholder="Zadejte maximální cenu...">
+        </div>
+		<div>
+            <div class="filter-label">Minimální cena (Kč)</div>
+            <input type="number" id="minPrice" step="1000000" min=0 placeholder="Zadejte minimální cenu...">
+        </div>
+    </div>
+
+    <!-- Second Row -->
+    <div class="filter-row">
+		<div>
+            <div class="filter-label">Maximální velikost (m²)</div>
+            <input type="number" id="maxsize" placeholder="Enter min size...">
+        </div>
+		<div>
+            <div class="filter-label">Minimální velikost (m²)</div>
+            <input type="number" id="minsize" placeholder="Enter min size...">
+        </div>
+        <div>
+            <div class="filter-label">‎ </div>
+            <button onclick="resetFilters()">Reset</button>
+        </div>
+    </div>
+</div>
+    <div class="grid" id="listings"></div>
+    
+    
+    <script>
+        let estates = [];
+
+        async function fetchEstates() {
+    try {
+        const response = await fetch("https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/buy.json");
+        const data = await response.json();
+        
+        console.log("Fetched Data:", data); // Debugging output
+
+        // Convert dictionary of arrays to an array of objects
+        const keys = Object.keys(data);
+        const length = Object.keys(data[keys[0]]).length; // Get number of entries
+        estates = Array.from({ length }, (_, i) => {
+            let obj = {};
+            keys.forEach(key => {
+                obj[key] = data[key][i]; // Assign each column value to an object
+            });
+            return obj;
+        });
+
+        populateFilters();
+        renderListings();
+    } catch (error) {
+        console.error("Error fetching estates:", error);
+    }
+}
+
+        function populateFilters() {
+            const locations = [...new Set(estates.map(e => estates.locality_district_id))];
+            const types = [...new Set(estates.map(e => e.size))];
+            
+            document.getElementById("Prague").innerHTML = '<option value="">Celá Praha</option>' + '<option value="Praha 1">Praha 1</option>'+ '<option value="Praha 2">Praha 2</option>'+
+			'<option value="Praha 3">Praha 3</option>'+ '<option value="Praha 4">Praha 4</option>'+ '<option value="Praha 5">Praha 5</option>'+ '<option value="Praha 6">Praha 6</option>'+ '<option value="Praha 7">Praha 7</option>'+
+			'<option value="Praha 8">Praha 8</option>'+ '<option value="Praha 9">Praha 9</option>'+ '<option value="Praha 10">Praha 10</option>'+ '<option value="Praha 11">Praha 11</option>'+ 
+			'<option value="Praha 12">Praha 12</option>'+ '<option value="Praha 13">Praha 13</option>'+ '<option value="Praha 14">Praha 14</option>'+ '<option value="Praha 15">Praha 15</option>'+ '<option value="Praha 16">Praha 16</option>'+ 
+			'<option value="Praha 17">Praha 17</option>'+ '<option value="Praha 18">Praha 18</option>'+ '<option value="Praha 19">Praha 19</option>'+ '<option value="Praha 20">Praha 20</option>'+ '<option value="Praha 21">Praha 21</option>'+ '<option value="Praha 22">Praha 22</option>';
+            
+            document.getElementById("type").innerHTML = '<option value="">Všechny</option>' + '<option value="1+1">1+1</option>' +'<option value="1+kk">1+kk</option>' +'<option value="2+1">2+1</option>' +'<option value="2+kk">2+kk</option>' +'<option value="3+1">3+1</option>' +
+			'<option value="3+kk">3+kk</option>' +'<option value="4+1">4+1</option>' +'<option value="4+kk">4+kk</option>' +'<option value="5+1">5+1</option>' +'<option value="5+kk">5+kk</option>' +'<option value="6-a-vice">6 a více</option>' +'<option value="atypicky">atypický</option>';
+        }
+
+        function renderListings() {
+            let search = document.getElementById('search').value.toLowerCase();
+            let Prague = document.getElementById('Prague').value;
+            let type = document.getElementById('type').value;
+            let maxPrice = document.getElementById('maxPrice').value;
+			let minPrice = document.getElementById('minPrice').value;
+            let maxsize = document.getElementById('maxsize').value;
+			let minsize = document.getElementById('minsize').value;
+			console.log(Prague);
+
+            let results = estates.filter(estate => 
+				(maxPrice === "" || estate.price <= Number(maxPrice)) &&
+				(minPrice === "" || estate.price >= Number(minPrice)) &&
+                (!estate.name || estate.name.toLowerCase().includes(search)) &&
+                (Prague === "" || getPraha(estate.locality_district_id) === Prague) &&
+                (type === "" || estate.size === type)  &&
+                (maxsize === "" || estate.usable_area <= maxsize) &&
+				(minsize === "" || estate.usable_area >= minsize)
+            );
+
+            let listings = document.getElementById('listings');
+			if (results.length === 0) {
+                listings.innerHTML = '<div class="no-results">No listings match your filters.</div>';
+            } else {
+            listings.innerHTML = results.map(estate => `
+                <div class="card">
+                        <a href=${estate.link} target="_blank"> <img src="${estate.image || 'blank'}" alt="${estate.name || 'Obrázek nemovitosti'}"> </a>
+                        <div class="card-content">
+                            <h3>${estate.name || 'No Name'}</h3>
+                            <p>${getPraha(estate.locality_district_id) || 'Neznámá Praha'}</p>
+                            <p>${(estate.usable_area + " m²") || 'Unknown Type'} - ${getType(estate.size) || 'N/A'}</p>
+                            <p><strong>${estate.price ? estate.price.toLocaleString() : 'N/A'} Kč</strong></p>
+                        </div>
+                    </div>
+            `).join('');
+			}
+        }
+
+        function resetFilters() {
+            document.getElementById('search').value = "";
+            document.getElementById('location').value = "";
+            document.getElementById('type').value = "";
+            document.getElementById('maxPrice').value = "";
+			document.getElementById('minPrice').value = "";
+            document.getElementById('size').value = "";
+            renderListings();
+        }
+		
+		function getPraha(pcode) {
+			n =  pcode - 5000
+			if (n > 0 && n < 30){
+				return "Praha " + n
+			}
+		}
+		
+		function getType(gtype) {
+			if (gtype == "6-a-vice"){
+				return "6 a více"
+			} else if (gtype == "atypicky") {
+				return "atypický"
+			} else {
+				return gtype
+			}
+			
+		}
+
+        let debounceTimer;
+        function debounceRender() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(renderListings, 300);
+        }
+
+        document.querySelectorAll('.filters input, .filters select').forEach(el => {
+            el.addEventListener('input', debounceRender);
+        });
+
+        fetchEstates();
+    </script>
+</body>
+</html>
