@@ -1,8 +1,6 @@
 """
 IDENTIFICATION OF UNDERVALUED APARTMENTS
 """
-import pandas as pd
-import configparser
 
 """ 
 -------------- Url guide for filtering --------------
@@ -42,27 +40,6 @@ bools (true | false):   "balcony="
                         "elevator="
 ---------------------------------------------------------
 """
-
-
-def generate_link():
-    """
-    Makes link from parameters in settings.cfg
-    """
-    config = configparser.ConfigParser()
-    config.read('settings.cfg')
-    data = {}
-    for section in config.sections():
-        if section == "filter":
-            for key, value in config.items(section):
-                data[key] = value
-    settings = pd.Series(data)
-    # TODO: make link from cfg
-
-
-def get_filtered_listings():
-    base_url = "https://www.sreality.cz/api/v1/estates/search?"
-    pass
-
 
 if __name__ == "__main__":
     pass
