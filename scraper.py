@@ -1,7 +1,7 @@
 """
     Scraper for the project. Uses Sreality.cz for gathering the data.
     Run by calling run_online() (see run_online() description)
-    Operates with buy.json and rent.json
+    Operates with sale.json and rent.json
 """
 
 import requests # for making HTTP requests
@@ -21,9 +21,9 @@ recursion = True
 # ---------------------
 
 
-# Declare option to buy or to rent
+# Declare option to sale or to rent
 intention = {
-    "buy": 1,
+    "sale": 1,
     "rent": 2
 }
 
@@ -277,20 +277,20 @@ def parse(base, desc):
 
 def run_online(intent):
     """
-        Executes various functions to update buy.json or rent.json from Sreality.cz.
-        :param intent: either "buy" or "rent"
+        Executes various functions to update sale.json or rent.json from Sreality.cz.
+        :param intent: either "sale" or "rent"
 
 
         Works in this order: finds new listings and their details, finds and marks deleted listings,
-        merges and saves to either buy.json or rent.json.
+        merges and saves to either sale.json or rent.json.
     """
-    if intent not in ["buy", "rent"]:
-        raise ValueError(f"""arg has to be either "buy" or "rent", not: {intent}""")
+    if intent not in ["sale", "rent"]:
+        raise ValueError(f"""arg has to be either "sale" or "rent", not: {intent}""")
 
     cb_type = intention[intent]
     master_db = None
 
-    # Check if buy.json or rent.json exist
+    # Check if sale.json or rent.json exist
     try:
         master_db = pd.read_json(f"last_scraping_for_modeling/{intent}.json")
         print(f"Found {intent}.json")
