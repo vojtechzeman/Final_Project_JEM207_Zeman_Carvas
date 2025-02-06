@@ -6,6 +6,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from datetime import datetime
+import glob
 import joblib
 import os
 
@@ -77,10 +79,18 @@ class Model:
         print(f"Model successfully trained.")
     
 
+        # Get current date in the desired format
+        current_date = datetime.now().strftime("%d.%m.%Y")
+
+        # Save the model
         if process_sale:
-            joblib.dump(model, "sale_model.joblib")
+            os.remove(glob.glob("sale_model_*.joblib")[0])
+            joblib.dump(model, f"sale_model_{current_date}.joblib")
         elif process_rent:
-            joblib.dump(model, "rent_model.joblib")  
+            os.remove(glob.glob("rent_model_*.joblib")[0])
+            joblib.dump(model, f"rent_model_{current_date}.joblib")
+
+        
 
 
 
