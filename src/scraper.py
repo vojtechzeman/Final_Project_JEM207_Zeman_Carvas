@@ -165,8 +165,15 @@ def get_all_sreality(category_type: int):
     # Get first image from nested dict in _links
     db["image"] = db.advert_images.apply(lambda x: "https:" + x[0] + "?fl=res,400,300,3|shr,,20|jpg,90")
 
+    # Add name of part of city and street for displaying purposes
+    locality = pd.json_normalize(db["locality"])
+    db["citypart"] = locality["citypart"]
+    db["street"] = locality["street"]
+
+    db["estimate"] = np.nan
+
     # Extract code and price
-    db = db[["hash_id", "price_czk", "image"]]
+    db = db[["hash_id", "price_czk", "image", "citypart", "street", "estimate"]]
 
     # Change id to code as it will be used for matching
     db.rename(columns={'hash_id':'code', "price_czk": "price"}, inplace=True)
@@ -199,10 +206,6 @@ def get_all_description(db):
 
         existing_cols = pd.concat(list_of_dfs).columns
 
-        print(f"Marking the rest ({db["code"].shape[0] - limit_for_details}) as not scraped")
-        for i in list(db["code"])[limit_for_details:]:
-            # 53 as there are that many columns in the dataset
-            list_of_dfs.append(pd.DataFrame([[np.nan] * 53], columns=existing_cols))
     else:
         required_runs = 0
         get_details_of_codes(list(db["code"]))
@@ -353,6 +356,14 @@ def run_online(intent):
     duplicates = master_db[master_db["code"].duplicated()].shape[0]
     if duplicates > 0:
         raise pd.errors.DuplicateLabelError(f"Found {duplicates} duplicated values")
+
+    # Update prices
+    print("Updating prices")
+    updated_prices = df_base[["code", "price"]]
+    updated_prices.set_index("code", inplace=True)
+    master_db_mod = master_db.set_index('code')
+    master_db_mod.update(updated_prices, overwrite=True)
+    master_db = master_db_mod.reset_index()
 
     # Save to json
     print(f"Saving to {intent}.json")
