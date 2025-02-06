@@ -401,6 +401,12 @@ class Scraper:
             print("Scraped data is complete as of now, no need to run scraper again")
 
     def get_estimates(self, estimates, intent: str):
+        """
+                    Writes predicted prices in the database (sale.json or rent.json)
+                    :param estimates: pandas DataFrame with codes and predicted prices
+                    :param intent: either "sale" or "rent"
+
+        """
         if intent not in ["sale", "rent"]:
             raise ValueError(f"""arg has to be either "sale" or "rent", not: {intent}""")
 
@@ -416,3 +422,5 @@ class Scraper:
         master_db.reset_index(drop=True, inplace=True)
         master_db.to_json(f"last_scraping_for_modeling/{intent}.json", index = False)
         print(f"Successfully saved estimates to {intent}.json")
+        print("If you want to view them, open Index.html or go to https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/")
+        print("Warning!, the website by default shows result from github, you have to load the json and select it")
