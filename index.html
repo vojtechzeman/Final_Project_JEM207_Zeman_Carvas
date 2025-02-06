@@ -241,7 +241,10 @@
             const file = fileInput.files[0];
             
             if (!file) {
+				console.log("Žádný soubor nebyl nahrán")
+				estates = [];
                 throw new Error("No file selected");
+				return;
             }
 
             data = await new Promise((resolve, reject) => {
@@ -252,6 +255,7 @@
                         const jsonData = JSON.parse(e.target.result);
                         resolve(jsonData);
                     } catch (error) {
+						console.log("Špatný JSON soubor")
                         reject(new Error("Invalid JSON file"));
                     }
                 };
@@ -324,7 +328,7 @@
 
             let listings = document.getElementById('listings');
 			if (results.length === 0) {
-                listings.innerHTML = '<div class="no-results">No listings match your filters.</div>';
+                listings.innerHTML = '<div class="no-results">Žádné nabídky neodpovídají vašem filtrům</div>';
             } else {
             listings.innerHTML = results.map(estate => `
                 <div class="card">
@@ -350,7 +354,6 @@
 			element.value = valueToSelect;
 		}
 		
-		
         function resetFilters() {
 			document.getElementById('street').value = "";
 			document.getElementById('citypart').value = "";
@@ -360,6 +363,7 @@
 			document.getElementById('minPrice').value = "";
 			document.getElementById('maxsize').value = "";
 			document.getElementById('minsize').value = "";
+			document.getElementById('myfile').value = "";
 			selectElement('intent', '1');
 			renderListings();
 			fetchEstates();
