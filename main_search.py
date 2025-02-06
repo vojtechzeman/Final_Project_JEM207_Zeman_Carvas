@@ -54,22 +54,21 @@ if __name__ == "__main__":
 
 
     # -----------------------------------------------------------------------
-    # FILTER WHAT APARTMENTS YOU WANT TO FIND
+    # DECIDE WHETHER YOU WANT TO BUY OR RENT AN APARTMENT
 
     data_type = 'rent'            # Choose: 'sale' | 'rent'
-    # TODO všechny filtery
-    # ...
     # -----------------------------------------------------------------------
 
 
-    # TODO scrapujem s filtrem
     if data_type == 'sale':
+        # TODO add scraper SALE
         data_processor.process_data(process_sale=True, process_rent=False)
-        annuity_processor.process_data_annuity()
-        searcher.search_apartments(load_sale=True, load_rent=False)
+        annuity_processor.process_data_annuity(search = True)
+        searcher.search_apartments(process_sale=True, process_rent=False)
     elif data_type == 'rent':
-        data_processor.process_data(process_sale=False, process_rent=True)
-        searcher.search_apartments(load_sale=False, load_rent=True)
+        # TODO add scraper RENT
+        data_processor.process_data(process_sale=False, process_rent=True, search = True)
+        searcher.search_apartments(process_sale=False, process_rent=True)
     
 
 

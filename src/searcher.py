@@ -1,5 +1,6 @@
 from sklearn.pipeline import Pipeline
 import joblib
+import pandas as pd
 
 
 class Searcher:
@@ -11,38 +12,52 @@ class Searcher:
             model = joblib.load("sale_model.joblib")
         elif load_rent:
             model = joblib.load("rent_model.joblib")
+        return model
 
+    def search_apartments(self, process_sale: bool = False, process_rent: bool = False) -> pd.DataFrame:
 
+        # Load data
+        if process_sale:
+            df = pd.read_json("data/processed/sale.json")
+        elif process_rent:
+            df = pd.read_json("data/processed/rent.json")
 
+        # Split features
+        continuous_features = ['usable_area']
+        if process_sale:
+            dummy_features = [
+                'garage', 'cellar', 'low_energy', 'balcony', 'easy_access',
+                'terrace', 'loggia', 'parking_lots', 'elevator', 'material_brick',
+                'material_panel', 'Prague_1', 'Prague_2', 'Prague_3', 'Prague_4',
+                'Prague_5', 'Prague_6', 'Prague_7', 'Prague_8', 'Prague_9',
+                'floor_ground', 'floor_above_ground', 'status_good', 'status_very_good',
+                'status_before_reconstruction', 'status_after_reconstruction',
+                'status_project', 'status_under_construction', 'kitchen_separately',
+                'ownership_private', 'nonresidential_unit'
+            ]
+        elif process_rent:
+            dummy_features = [
+                'garage', 'cellar', 'low_energy', 'balcony', 'easy_access',
+                'terrace', 'loggia', 'parking_lots', 'elevator', 'material_brick',
+                'material_panel', 'Prague_1', 'Prague_2', 'Prague_3', 'Prague_4',
+                'Prague_5', 'Prague_6', 'Prague_7', 'Prague_8', 'Prague_9',
+                'floor_ground', 'floor_above_ground', 'status_good', 'status_very_good',
+                'status_after_reconstruction', 'kitchen_separately', 'nonresidential_unit',
+                'fully_furnished', 'partially_furnished'
+            ]
 
-# import pandas as pd
-# import joblib
+        # Load model
+        model = self.load_model(load_sale=process_sale, load_rent=process_rent)
 
-# # Load your saved model
-# model = joblib.load("rent_model.joblib")  # or "sale_model.joblib" depending on what you're predicting
+        # Make predictions
+        predicted_prices = model.predict(df[continuous_features + dummy_features])
 
-# # Read your CSV
-# df = pd.read_csv('your_file.csv', sep=';')
+        # Create output DataFrame
+        result_df = pd.DataFrame({
+            'code': df.index,
+            'predicted_price': predicted_prices
+        })
+        
+        print(result_df)
+        return result_df
 
-# # Create X with the same features used in training
-# continuous_features = ['usable_area']
-# dummy_features = [
-#     'garage', 'cellar', 'low_energy', 'balcony', 'easy_access',
-#     'terrace', 'loggia', 'parking_lots', 'elevator', 'material_brick',
-#     'material_panel', 'Prague_1', 'Prague_2', 'Prague_3', 'Prague_4',
-#     'Prague_5', 'Prague_6', 'Prague_7', 'Prague_8', 'Prague_9',
-#     'floor_ground', 'floor_above_ground', 'status_good', 'status_very_good',
-#     'status_after_reconstruction', 'kitchen_separately', 'nonresidential_unit',
-#     'fully_furnished', 'partially_furnished'
-# ]
-
-# X = df[continuous_features + dummy_features]
-
-# # Make predictions
-# predicted_prices = model.predict(X)
-
-# # Add predictions to the dataframe
-# df['predicted_price'] = predicted_prices
-
-# # Save the updated dataframe
-# df.to_csv('your_file_with_predictions.csv', sep=';', index=False)

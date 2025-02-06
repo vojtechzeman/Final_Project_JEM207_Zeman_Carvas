@@ -18,10 +18,10 @@ class HistoryChecker:
 
         # Loading data
         if check_sale:
-            df = pd.read_json("data/raw/deleted_sale.json")
+            df = pd.read_csv("data/processed/sale.csv", sep=';')
             last_scraping = pd.read_json("last_scraping_for_modeling/sale.json")
         if check_rent:
-            df = pd.read_json("data/raw/deleted_rent.json")
+            df = pd.read_csv("data/processed/rent.csv", sep=';')
             last_scraping = pd.read_json("last_scraping_for_modeling/rent.json")
 
         # Timestamp to date

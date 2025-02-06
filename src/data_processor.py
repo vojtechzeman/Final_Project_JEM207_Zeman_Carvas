@@ -14,10 +14,10 @@ class DataProcessor:
             'cellar', 'locality_district_id', 'furnished', 'low_energy', 
             'floor', 'balcony', 'usable_area', 'easy_access', 
             'description', 'material', 'age_of_building', 
-            'meta_description', 'terrace', 'loggia', 'parking_lots', 'price', 'image', 'link'
+            'meta_description', 'terrace', 'loggia', 'parking_lots', 'price', 'code', 'timestamp'
         }
 
-    def process_data(self, process_sale: bool = False, process_rent: bool = False) -> None:
+    def process_data(self, process_sale: bool = False, process_rent: bool = False, search: bool = False) -> None:
         """
         SALE:
 
@@ -84,21 +84,6 @@ class DataProcessor:
         df = df.dropna(subset=['price'])
         df = df[df['price'] != 0]
         df = df[df['price'] != 1]
-
-
-        def extract_metadata(desc):
-            try:
-                words = desc.split()
-                if words[2] == "pokojů":
-                    return ' '.join(words[0:5])
-                elif words[2] == "dispozice":
-                    return ' '.join(words[0:3])
-                else:
-                    return ' '.join(words[0:2])
-            except (ValueError, IndexError):
-                return None
-
-        df['metadata'] = df['meta_description'].apply(extract_metadata)
 
 
         # Process usable area from meta_description
@@ -225,13 +210,18 @@ class DataProcessor:
         if process_rent:
             df = df.drop(columns=['description'], errors='ignore')
             # Reorder columns
-            cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'metadata', 'image', 'link']] + ['metadata', 'image', 'link']
+            cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'code', 'timestamp']] + ['code', 'timestamp']
             df = df[cols]
-            # Save as CSV
-            df.to_csv("data/processed/rent.csv", index=False, encoding='utf-8', sep=";")
+            if search:
+                # Save as JSON
+                df.to_json("data/processed/rent.json", orient='records', force_ascii=False, indent=2)
+            else:
+                # Save as CSV
+                df.to_csv("data/processed/rent.csv", index=False, encoding='utf-8', sep=";")
         else:
             # Save as JSON
             df.to_json("data/processed/sale.json", orient='records', force_ascii=False, indent=2)
+
 
         print(f"Successfully processed data")
 

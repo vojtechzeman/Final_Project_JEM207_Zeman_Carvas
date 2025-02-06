@@ -8,7 +8,7 @@ class AnnuityProcessor:
     def __init__(self) -> None:
         pass
 
-    def process_data_annuity(self) -> None:
+    def process_data_annuity(self, search: bool = False) -> None:
         """
         Update prices of non-private items with annuities (information got from item description).
 
@@ -201,11 +201,15 @@ class AnnuityProcessor:
 
         # Save result
         df = pd.DataFrame(data)
-        cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'metadata', 'image', 'link']] + ['metadata', 'image', 'link']
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'code', 'timestamp']] + ['code', 'timestamp']
         df = df[cols]
-        df.to_csv("data/processed/sale.csv", index=False, encoding='utf-8', sep=";")
+        if search:
+            df.to_json("data/processed/sale.json", orient='records', force_ascii=False, indent=2)
+        else:
+            df.to_csv("data/processed/sale.csv", index=False, encoding='utf-8', sep=";")
+            os.remove("data/processed/sale.json")
 
-        os.remove("data/processed/sale.json")
 
         print(f"Successfully processed annuity")
 
