@@ -41,9 +41,37 @@ bools (true | false):   "balcony="
 ---------------------------------------------------------
 """
 
-if __name__ == "__main__":
-    pass
 
+from src.data_processor import DataProcessor
+data_processor = DataProcessor()
+from src.annuity_processor import AnnuityProcessor
+annuity_processor = AnnuityProcessor()
+from src.searcher import Searcher
+searcher = Searcher()
+
+
+if __name__ == "__main__":
+
+
+    # -----------------------------------------------------------------------
+    # FILTER WHAT APARTMENTS YOU WANT TO FIND
+
+    data_type = 'rent'            # Choose: 'sale' | 'rent'
+    # TODO všechny filtery
+    # ...
+    # -----------------------------------------------------------------------
+
+
+    # TODO scrapujem s filtrem
+    if data_type == 'sale':
+        data_processor.process_data(process_sale=True, process_rent=False)
+        annuity_processor.process_data_annuity()
+        searcher.search_apartments(load_sale=True, load_rent=False)
+    elif data_type == 'rent':
+        data_processor.process_data(process_sale=False, process_rent=True)
+        searcher.search_apartments(load_sale=False, load_rent=True)
     
+
+
 
 

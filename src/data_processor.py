@@ -14,7 +14,7 @@ class DataProcessor:
             'cellar', 'locality_district_id', 'furnished', 'low_energy', 
             'floor', 'balcony', 'usable_area', 'easy_access', 
             'description', 'material', 'age_of_building', 
-            'meta_description', 'terrace', 'loggia', 'parking_lots', 'price'
+            'meta_description', 'terrace', 'loggia', 'parking_lots', 'price', 'image', 'link'
         }
 
     def process_data(self, process_sale: bool = False, process_rent: bool = False) -> None:
@@ -84,6 +84,23 @@ class DataProcessor:
         df = df.dropna(subset=['price'])
         df = df[df['price'] != 0]
         df = df[df['price'] != 1]
+
+
+        def extract_metadata(desc):
+            try:
+                words = desc.split()
+                if words[2] == "pokojů":
+                    return ' '.join(words[0:4])
+                elif words[2] == "dispozice":
+                    return ' '.join(words[0:2])
+                else:
+                    return ' '.join(words[0:1])
+            except (ValueError, IndexError):
+                return None
+
+        df['metadata'] = df['meta_description'].apply(extract_metadata)
+        print(df['metadata'])
+
 
         # Process usable area from meta_description
         def extract_usable_area(desc):
@@ -209,7 +226,7 @@ class DataProcessor:
         if process_rent:
             df = df.drop(columns=['description'], errors='ignore')
             # Reorder columns
-            cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area']]
+            cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'metadata', 'image', 'link']] + ['metadata', 'image', 'link']
             df = df[cols]
             # Save as CSV
             df.to_csv("data/processed/rent.csv", index=False, encoding='utf-8', sep=";")
