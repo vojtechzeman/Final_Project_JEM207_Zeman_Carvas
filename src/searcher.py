@@ -2,6 +2,7 @@ from sklearn.pipeline import Pipeline
 import joblib
 import pandas as pd
 import os
+import glob
 
 
 class Searcher:
@@ -10,9 +11,9 @@ class Searcher:
 
     def load_model(self, load_sale: bool = False, load_rent: bool = False) -> Pipeline:
         if load_sale:
-            model = joblib.load("sale_model.joblib")
+            model = joblib.load(glob.glob("sale_model_*.joblib")[0])
         elif load_rent:
-            model = joblib.load("rent_model.joblib")
+            model = joblib.load(glob.glob("rent_model_*.joblib")[0])
         return model
 
     def search_apartments(self, process_sale: bool = False, process_rent: bool = False) -> pd.DataFrame:
