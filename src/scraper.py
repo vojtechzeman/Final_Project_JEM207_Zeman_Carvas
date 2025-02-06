@@ -399,3 +399,20 @@ class Scraper:
                 self.run_online(intent)
         else:
             print("Scraped data is complete as of now, no need to run scraper again")
+
+    def get_estimates(self, estimates, intent: str):
+        if intent not in ["sale", "rent"]:
+            raise ValueError(f"""arg has to be either "sale" or "rent", not: {intent}""")
+
+        try:
+            master_db = pd.read_json(f"last_scraping_for_modeling/{intent}.json")
+            print(f"Found {intent}.json")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No such file {intent}.json. Execute Run() to create such file")
+
+        master_db = pd.merge(master_db, estimates, on="code", how="left")
+        master_db["estimate"] =  master_db["price"]/ master_db["predicted_price"]
+        master_db = master_db.drop("predicted_price", axis=1)
+        master_db.reset_index(drop=True, inplace=True)
+        master_db.to_json(f"last_scraping_for_modeling/{intent}.json", index = False)
+        print(f"Successfully saved estimates to {intent}.json")
