@@ -26,12 +26,10 @@ if __name__ == "__main__":
         data_processor.process_data(process_sale=True, process_rent=False, search = True)
         annuity_processor.process_data_annuity(search = True)
         result_df = searcher.search_apartments(process_sale=True, process_rent=False)
-        # TODO add concatenate of data + predictions
     elif data_type == 'rent':
         # TODO add scraper RENT
         data_processor.process_data(process_sale=False, process_rent=True, search = True)
         result_df = searcher.search_apartments(process_sale=False, process_rent=True)
-        # TODO add concatenate of data + predictions
 
 
     print(result_df)
