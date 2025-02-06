@@ -13,7 +13,7 @@
         }
         .filters { 
             display: flex; 
-			flex-direction: column;
+            flex-direction: column;
             gap: 10px; 
             flex-wrap: wrap; 
             margin-bottom: 20px;
@@ -22,12 +22,12 @@
             margin-right: auto;
             justify-content: center;
         }
-		.filter-row {
-			display: flex;
-			gap: 10px; /* Space between filter elements */
-			flex-wrap: wrap; /* Allow wrapping if needed */
-			justify-content: center; /* Center the filters */
-		}
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
         .filters input, .filters select, .filters button {
             padding: 10px;
             border: 1px solid #ccc;
@@ -52,6 +52,7 @@
             display: flex;
             align-items: center;
             gap: 25px;
+            position: relative;
         }
         .card img { 
             width: 266px;
@@ -62,28 +63,88 @@
         }
         .card-content {
             flex-grow: 1;
-            text-align: left;
         }
         .card h3 {
+            text-align: left;
             margin-top: 0;
             margin-bottom: 20px;
-			font-size: 27px
+            font-size: 27px
         }
         .card p {
+            text-align: left;
             margin: 5px 0;
-			font-size: 18px;
+            font-size: 18px;
         }
         .filter-label {
             font-size: 14px;
             color: #555;
             margin-bottom: 5px;
         }
+        .pricing-badge {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 32px;
+            font-weight: bold;
+        }
+		.pricing-badge.positive {
+            background-color: #28a745;
+        }
+        .pricing-badge.negative {
+            background-color: #ff4444;
+        }
+		.tooltip {
+		  position: relative;
+		  display: inline-block;
+		  border-bottom: 1px dotted black;
+		}
+
+		.tooltip .tooltiptext {
+		  visibility: hidden;
+		  width: 120px;
+		  background-color: black;
+		  color: #fff;
+		  text-align: center;
+		  border-radius: 6px;
+		  padding: 5px 0;
+		  position: absolute;
+		  z-index: 1;
+		  bottom: 150%;
+		  left: 100%;
+		  margin-left: -155px;
+		  margin-bottom: 35px;
+		}
+
+		.tooltip .tooltiptext::after {
+		  content: "";
+		  position: absolute;
+		  top: 100%;
+		  left: 50%;
+		  margin-left: -5px;
+		  border-width: 5px;
+		  border-style: solid;
+		  border-color: black transparent transparent transparent;
+		}
+
+		.tooltip:hover .tooltiptext {
+		  visibility: visible;
     </style>
 </head>
 <body>
     <div class="filters">
     <!-- First Row -->
     <div class="filter-row">
+		<div>
+            <div class="filter-label">Co chcete hledat? (používá github)</div>
+            <select id="intent">
+				<option value="1">Prodej</option>
+				<option value="2">Pronájem</option>
+			</select>
+        </div>
         <div>
             <div class="filter-label">Ulice</div>
             <input type="text" id="street" placeholder="Zadejte název ulice...">
@@ -100,7 +161,10 @@
             <div class="filter-label">Velikost bytu</div>
             <select id="type"></select>
         </div>
-        <div>
+    </div>
+    <!-- Second Row -->
+    <div class="filter-row">
+		<div>
             <div class="filter-label">Maximální cena (Kč)</div>
             <input type="number" id="maxPrice" step="1000000" min=0 placeholder="Zadejte maximální cenu...">
         </div>
@@ -108,10 +172,6 @@
             <div class="filter-label">Minimální cena (Kč)</div>
             <input type="number" id="minPrice" step="1000000" min=0 placeholder="Zadejte minimální cenu...">
         </div>
-    </div>
-
-    <!-- Second Row -->
-    <div class="filter-row">
 		<div>
             <div class="filter-label">Maximální velikost (m²)</div>
             <input type="number" id="maxsize" placeholder="Enter min size...">
@@ -119,6 +179,13 @@
 		<div>
             <div class="filter-label">Minimální velikost (m²)</div>
             <input type="number" id="minsize" placeholder="Enter min size...">
+        </div>
+		<div>
+            <div class="filter-label">Seřadit podhodnocení</div>
+            <select id="sorting">
+				<option value="1">Sestupně</option>
+				<option value="2">Vzestupně</option>
+			</select>
         </div>
         <div>
             <div class="filter-label">‎ </div>
@@ -131,31 +198,37 @@
     
     <script>
         let estates = [];
-
+		
         async function fetchEstates() {
-    try {
-        const response = await fetch("https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/sale.json");
-        const data = await response.json();
-        
-        console.log("Fetched Data:", data); // Debugging output
+			let listings_tp = document.getElementById('intent').value;
+			if (listings_tp === "1") {
+			  gitlink = "https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/sale.json"
+			} else if (listings_tp === "2") {
+			  gitlink = "https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/rent.json"
+			} 
+			try {
+				const response = await fetch(gitlink);
+				const data = await response.json();
+				
+				console.log("Fetched Data:", data); // Debugging output
 
-        // Convert dictionary of arrays to an array of objects
-        const keys = Object.keys(data);
-        const length = Object.keys(data[keys[0]]).length; // Get number of entries
-        estates = Array.from({ length }, (_, i) => {
-            let obj = {};
-            keys.forEach(key => {
-                obj[key] = data[key][i]; // Assign each column value to an object
-            });
-            return obj;
-        });
+				// Convert dictionary of arrays to an array of objects
+				const keys = Object.keys(data);
+				const length = Object.keys(data[keys[0]]).length; // Get number of entries
+				estates = Array.from({ length }, (_, i) => {
+					let obj = {};
+					keys.forEach(key => {
+						obj[key] = data[key][i]; // Assign each column value to an object
+					});
+					return obj;
+				});
 
-        populateFilters();
-        renderListings();
-    } catch (error) {
-        console.error("Error fetching estates:", error);
-    }
-}
+				populateFilters();
+				renderListings();
+			} catch (error) {
+				console.error("Error fetching estates:", error);
+			}
+		}
 
         function populateFilters() {
             const locations = [...new Set(estates.map(e => estates.locality_district_id))];
@@ -187,8 +260,17 @@
                 (Prague === "" || getPraha(estate.locality_district_id) === Prague) &&
                 (type === "" || estate.size === type)  &&
                 (maxsize === "" || estate.usable_area <= maxsize) &&
-				(minsize === "" || estate.usable_area >= minsize)
+				(minsize === "" || estate.usable_area >= minsize) &&
+				(estate.estimate > 0 && estate.estimate < 2)
             );
+			let order = document.getElementById('sorting').value;
+			if (order === "1") {
+			  results.sort((a, b) => b.estimate - a.estimate); // Descending
+			} else if (order === "2") {
+			  results.sort((a, b) => a.estimate - b.estimate); // Ascending
+			}
+			
+			
 
             let listings = document.getElementById('listings');
 			if (results.length === 0) {
@@ -203,6 +285,11 @@
                             <p>${(estate.usable_area + " m²") || 'Unknown Type'} - ${getType(estate.size) || 'N/A'}</p>
                             <p><strong>${estate.price ? estate.price.toLocaleString() : 'N/A'} Kč</strong></p>
                         </div>
+						<div class="tooltip"><span class="tooltiptext">${(Math.round(estate.estimate*estate.price)).toLocaleString() + " Kč"}</span>
+							<div class="pricing-badge ${(1 - estate.estimate) > 0 ? 'negative' : 'positive'}">
+							${getPercentage((1 - estate.estimate)*100)}%
+							</div>
+						</div>
                     </div>
             `).join('');
 			}
@@ -246,6 +333,17 @@
 				return street_name + ", " + city_part;
 			}
 		}
+		
+		function getPercentage(num) {
+			if (num < 0) {
+				return num.toFixed(2);
+			} else if (num > 0) {
+				return "+" + num.toFixed(2);
+			} else {
+				return "0";
+			}
+		}
+
 
 
         let debounceTimer;
@@ -257,7 +355,7 @@
         document.querySelectorAll('.filters input, .filters select').forEach(el => {
             el.addEventListener('input', debounceRender);
         });
-
+		document.getElementById('intent').addEventListener('change', fetchEstates);
         fetchEstates();
     </script>
 </body>
