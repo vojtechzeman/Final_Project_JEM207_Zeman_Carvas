@@ -58,7 +58,7 @@ class Searcher:
 
         # Create output DataFrame
         result_df = pd.DataFrame({
-            'code': df.index,
+            'code': df['code'],
             'predicted_price': predicted_prices
         })
         
