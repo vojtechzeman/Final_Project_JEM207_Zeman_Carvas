@@ -90,16 +90,15 @@ class DataProcessor:
             try:
                 words = desc.split()
                 if words[2] == "pokojů":
-                    return ' '.join(words[0:4])
+                    return ' '.join(words[0:5])
                 elif words[2] == "dispozice":
-                    return ' '.join(words[0:2])
+                    return ' '.join(words[0:3])
                 else:
-                    return ' '.join(words[0:1])
+                    return ' '.join(words[0:2])
             except (ValueError, IndexError):
                 return None
 
         df['metadata'] = df['meta_description'].apply(extract_metadata)
-        print(df['metadata'])
 
 
         # Process usable area from meta_description

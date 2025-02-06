@@ -201,10 +201,8 @@ class AnnuityProcessor:
 
         # Save result
         df = pd.DataFrame(data)
-        desired_order = ['price', 'usable_area']
-        other_columns = [col for col in df.columns if col not in desired_order]
-        final_order = desired_order + other_columns
-        df = df[final_order]
+        cols = ['price', 'usable_area'] + [col for col in df.columns if col not in ['price', 'usable_area', 'metadata', 'image', 'link']] + ['metadata', 'image', 'link']
+        df = df[cols]
         df.to_csv("data/processed/sale.csv", index=False, encoding='utf-8', sep=";")
 
         os.remove("data/processed/sale.json")

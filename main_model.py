@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # DECIDE WHICH DATA YOU WILL PERFORM OPERATION WITH
 
     operation = 'update_model'    # Choose: 'check_history' | 'update_model'
-    data_type = 'rent'            # Choose: 'sale' | 'rent'
+    data_type = 'sale'            # Choose: 'sale' | 'rent'
     # -----------------------------------------------------------------------
 
 
