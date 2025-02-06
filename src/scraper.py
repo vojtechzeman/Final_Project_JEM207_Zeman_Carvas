@@ -165,8 +165,11 @@ def get_all_sreality(category_type: int):
     # Get first image from nested dict in _links
     db["image"] = db.advert_images.apply(lambda x: "https:" + x[0] + "?fl=res,400,300,3|shr,,20|jpg,90")
 
+
+    db["estimate"] = np.nan
+
     # Extract code and price
-    db = db[["hash_id", "price_czk", "image"]]
+    db = db[["hash_id", "price_czk", "image", "estimate"]]
 
     # Change id to code as it will be used for matching
     db.rename(columns={'hash_id':'code', "price_czk": "price"}, inplace=True)
@@ -199,10 +202,6 @@ def get_all_description(db):
 
         existing_cols = pd.concat(list_of_dfs).columns
 
-        print(f"Marking the rest ({db["code"].shape[0] - limit_for_details}) as not scraped")
-        for i in list(db["code"])[limit_for_details:]:
-            # 53 as there are that many columns in the dataset
-            list_of_dfs.append(pd.DataFrame([[np.nan] * 53], columns=existing_cols))
     else:
         required_runs = 0
         get_details_of_codes(list(db["code"]))
@@ -290,6 +289,27 @@ def run_online(intent):
     cb_type = intention[intent]
     master_db = None
 
+    # Declare a function for later use
+    get_intent = {
+        1: "prodeji",
+        2: "pronájmu"
+    }
+    def get_street_city(db):
+        meta = db["meta_description"]
+        start = meta.find(f"k {get_intent[intention[intent]]}") + len(f"k {inta}")
+        end = meta.find(";")
+        composite = meta[start:end]
+        if "," not in composite:
+            db["street"] = np.nan
+        else:
+            db["street"] = composite[:composite.find(",")]
+        if "-" not in composite:
+            db["citypart"] = np.nan
+        else:
+            db["citypart"] = composite[composite.find("- ") + 2:]
+
+        return db
+
     # Check if sale.json or rent.json exist
     try:
         master_db = pd.read_json(f"last_scraping_for_modeling/{intent}.json")
@@ -312,6 +332,7 @@ def run_online(intent):
         if len(new_ids) != 0:
             new_ids_desc,req_runs = get_all_description(new_ids)
             new_ids_complete = parse(new_ids, new_ids_desc)
+            new_ids_complete = new_ids_complete.apply(get_street_city, axis=1)
         else:
             req_runs = 0
 
@@ -353,6 +374,14 @@ def run_online(intent):
     duplicates = master_db[master_db["code"].duplicated()].shape[0]
     if duplicates > 0:
         raise pd.errors.DuplicateLabelError(f"Found {duplicates} duplicated values")
+
+    # Update prices
+    print("Updating prices")
+    updated_prices = df_base[["code", "price"]]
+    updated_prices.set_index("code", inplace=True)
+    master_db_mod = master_db.set_index('code')
+    master_db_mod.update(updated_prices, overwrite=True)
+    master_db = master_db_mod.reset_index()
 
     # Save to json
     print(f"Saving to {intent}.json")
