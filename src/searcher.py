@@ -61,7 +61,7 @@ class Searcher:
             'code': df['code'],
             'predicted_price': predicted_prices
         })
-        
 
+        
         return result_df
 

@@ -25,6 +25,7 @@ class Model:
 
 
         # Concatenate the datasets
+        df = pd.concat([df_0, df], axis=0, ignore_index=True)
         
         
         # Split features
