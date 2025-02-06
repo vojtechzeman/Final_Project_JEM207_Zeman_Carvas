@@ -26,10 +26,14 @@ if __name__ == "__main__":
         data_processor.process_data(process_sale=True, process_rent=False, search = True)
         annuity_processor.process_data_annuity(search = True)
         result_df = searcher.search_apartments(process_sale=True, process_rent=False)
+        # TODO add concatenate of data + predictions
+
     elif data_type == 'rent':
         # TODO add scraper RENT
         data_processor.process_data(process_sale=False, process_rent=True, search = True)
         result_df = searcher.search_apartments(process_sale=False, process_rent=True)
+        # TODO add concatenate of data + predictions
+
 
 
     print(result_df)
@@ -76,3 +80,39 @@ bools (true | false):   "balcony="
                         "elevator="
 ---------------------------------------------------------
 """
+
+
+from src.data_processor import DataProcessor
+data_processor = DataProcessor()
+from src.annuity_processor import AnnuityProcessor
+annuity_processor = AnnuityProcessor()
+from src.searcher import Searcher
+searcher = Searcher()
+
+
+if __name__ == "__main__":
+
+
+    # -----------------------------------------------------------------------
+    # DECIDE WHETHER YOU WANT TO BUY OR RENT AN APARTMENT
+
+    data_type = 'sale'            # Choose: 'sale' | 'rent'
+    # -----------------------------------------------------------------------
+
+
+    if data_type == 'sale':
+        # TODO add scraper SALE
+        data_processor.process_data(process_sale=True, process_rent=False, search = True)
+        annuity_processor.process_data_annuity(search = True)
+        result_df = searcher.search_apartments(process_sale=True, process_rent=False)
+    elif data_type == 'rent':
+        # TODO add scraper RENT
+        data_processor.process_data(process_sale=False, process_rent=True, search = True)
+        result_df = searcher.search_apartments(process_sale=False, process_rent=True)
+
+    print(result_df)
+    
+
+
+
+

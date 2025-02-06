@@ -10,6 +10,8 @@ from src.annuity_processor import AnnuityProcessor
 annuity_processor = AnnuityProcessor()
 from src.model_builder import Model
 model = Model()
+from src.scraper import Scraper
+scraper = Scraper()
 
 
 if __name__ == "__main__":
@@ -33,12 +35,12 @@ if __name__ == "__main__":
     if operation == 'update_model':
         check = input("Did you check the model history first? (yes/no): ")
         if data_type == 'sale' and check == "yes":
-            # TODO add scraper SALE
+            scraper.run(intent="sale")
             data_processor.process_data(process_sale=True, process_rent=False)
             annuity_processor.process_data_annuity()
             model = model.train_model(process_sale=True, process_rent=False)
         elif data_type == 'rent' and check == "yes":
-            # TODO add scraper RENT
+            scraper.run(intent="rent")
             data_processor.process_data(process_sale=False, process_rent=True)
             model = model.train_model(process_sale=False, process_rent=True)
         else:
