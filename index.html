@@ -130,7 +130,7 @@
 
         async function fetchEstates() {
     try {
-        const response = await fetch("https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/buy.json");
+        const response = await fetch("https://raw.githubusercontent.com/vojtechzeman/Final_Project_JEM207_Zeman_Carvas/refs/heads/main/last_scraping_for_modeling/sale.json");
         const data = await response.json();
         
         console.log("Fetched Data:", data); // Debugging output
@@ -159,10 +159,7 @@
             
             document.getElementById("Prague").innerHTML = '<option value="">Celá Praha</option>' + '<option value="Praha 1">Praha 1</option>'+ '<option value="Praha 2">Praha 2</option>'+
 			'<option value="Praha 3">Praha 3</option>'+ '<option value="Praha 4">Praha 4</option>'+ '<option value="Praha 5">Praha 5</option>'+ '<option value="Praha 6">Praha 6</option>'+ '<option value="Praha 7">Praha 7</option>'+
-			'<option value="Praha 8">Praha 8</option>'+ '<option value="Praha 9">Praha 9</option>'+ '<option value="Praha 10">Praha 10</option>'+ '<option value="Praha 11">Praha 11</option>'+ 
-			'<option value="Praha 12">Praha 12</option>'+ '<option value="Praha 13">Praha 13</option>'+ '<option value="Praha 14">Praha 14</option>'+ '<option value="Praha 15">Praha 15</option>'+ '<option value="Praha 16">Praha 16</option>'+ 
-			'<option value="Praha 17">Praha 17</option>'+ '<option value="Praha 18">Praha 18</option>'+ '<option value="Praha 19">Praha 19</option>'+ '<option value="Praha 20">Praha 20</option>'+ '<option value="Praha 21">Praha 21</option>'+ '<option value="Praha 22">Praha 22</option>';
-            
+			'<option value="Praha 8">Praha 8</option>'+ '<option value="Praha 9">Praha 9</option>'+ '<option value="Praha 10">Praha 10</option>';
             document.getElementById("type").innerHTML = '<option value="">Všechny</option>' + '<option value="1+1">1+1</option>' +'<option value="1+kk">1+kk</option>' +'<option value="2+1">2+1</option>' +'<option value="2+kk">2+kk</option>' +'<option value="3+1">3+1</option>' +
 			'<option value="3+kk">3+kk</option>' +'<option value="4+1">4+1</option>' +'<option value="4+kk">4+kk</option>' +'<option value="5+1">5+1</option>' +'<option value="5+kk">5+kk</option>' +'<option value="6-a-vice">6 a více</option>' +'<option value="atypicky">atypický</option>';
         }
