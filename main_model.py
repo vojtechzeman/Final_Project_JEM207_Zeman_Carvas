@@ -14,29 +14,33 @@ model = Model()
 
 if __name__ == "__main__":
 
-    # Check the history first before you update the model
-    # "sale" / "rent" / "-"
-    data_type_1 = '-'
 
-    if data_type_1 == 'sale':
-        history_checker.check_model_history(check_sale=True, check_rent=False)
-    elif data_type_1 == 'rent':
-        history_checker.check_model_history(check_sale=False, check_rent=True)
+    # -----------------------------------------------------------------------
+    # DECIDE WHETHER TO 'CHECK MODEL HISTORY' OR 'UPDATE MODEL'
+    # DECIDE WHICH DATA YOU WILL PERFORM OPERATION WITH
+
+    operation = 'update_model'    # Choose: 'check_history' | 'update_model'
+    data_type = 'sale'            # Choose: 'sale' | 'rent'
+    # -----------------------------------------------------------------------
 
 
-    # What type of data do you want to process?
-    # "sale" / "rent" / "-"
-    data_type_2 = 'sale'
-    check = input("Did you check the model history? (yes/no): ")
- 
-    if check == "yes":
-        if data_type_2 == 'sale':
+    if operation == 'check_history':
+        if data_type == 'sale':
+            history_checker.check_model_history(check_sale=True, check_rent=False)
+        elif data_type == 'rent':
+            history_checker.check_model_history(check_sale=False, check_rent=True)
+
+    if operation == 'update_model':
+        check = input("Did you check the model history first? (yes/no): ")
+        if data_type == 'sale' and check == "yes":
             data_processor.process_data(process_sale=True, process_rent=False)
             annuity_processor.process_data_annuity()
-            model = model.train_model(process_sale=True, process_rent=False)
-        elif data_type_2 == 'rent':
+            # model = model.train_model(process_sale=True, process_rent=False)
+        elif data_type == 'rent' and check == "yes":
             data_processor.process_data(process_sale=False, process_rent=True)
-            model = model.train_model(process_sale=False, process_rent=True)
+            # model = model.train_model(process_sale=False, process_rent=True)
+        else:
+            print("Please check the model history first.")
 
 
 

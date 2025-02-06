@@ -14,21 +14,15 @@ class HistoryChecker:
         Therefore, we check the dataset "deleted_listings_..." and additionally we check when the last scraping was done, because the data from here is not yet in the dataset "deleted_listings_...".
         """
 
-        if not check_sale and not check_rent:
-            return
-        
-        if check_sale and check_rent:
-            raise ValueError("You can check only one type at a time.")
+        x = 7     # Updating interval in days
 
         # Loading data
         if check_sale:
-            df = pd.read_csv("data/raw/deleted_listings_sale.csv", delimiter=";")
-            last_scraping_file = max(glob.glob("last_scraping_for_modeling/sale_*.csv"))
-            last_scraping = pd.read_csv(last_scraping_file, delimiter=";")
+            df = pd.read_json("data/raw/deleted_sale.json")
+            last_scraping = pd.read_json("last_scraping_for_modeling/sale.json")
         if check_rent:
-            df = pd.read_csv("data/raw/deleted_listings_rent.csv", delimiter=";")
-            last_scraping_file = max(glob.glob("last_scraping_for_modeling/rent_*.csv"))
-            last_scraping = pd.read_csv(last_scraping_file, delimiter=";")
+            df = pd.read_json("data/raw/deleted_rent.json")
+            last_scraping = pd.read_json("last_scraping_for_modeling/rent.json")
 
         # Timestamp to date
         df['date'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d')
@@ -36,10 +30,10 @@ class HistoryChecker:
 
         # Width of the graph
         min_date = pd.to_datetime(df['date']).min()
-        max_date = pd.to_datetime(last_scraping['date'])[0]
+        max_date = pd.to_datetime(last_scraping['date']).max()
         blue_line = max_date - min_date
         days_difference = (pd.to_datetime('today').normalize() - max_date).days
-        max_date = max_date + pd.DateOffset(days=max(15, days_difference))
+        max_date = max_date + pd.DateOffset(days=max(x, days_difference))
         red_line = max_date - min_date
 
         # Time series
@@ -54,8 +48,11 @@ class HistoryChecker:
         daily_counts['count'] = daily_counts['count'].fillna(0)
 
         # Graph
-        plt.figure(figsize=(15, 6))
+        plt.figure(figsize=(13, 6))
         plt.bar(range(len(daily_counts)), daily_counts['count'], color='blue')
+        plt.ylim(0, max(daily_counts['count']) * 1.1)
+
+        max_bar_size = daily_counts['count'].max()
 
         # Title
         if check_sale:
@@ -67,20 +64,20 @@ class HistoryChecker:
         # Dates
         for i, row in daily_counts.iterrows():
             if row['count'] > 0 or i == blue_line.days or i == red_line.days:
-                plt.text(i+0.5, -300, row['date'], rotation=55, ha='right')
+                plt.text(i, -(max_bar_size/20), row['date'], rotation=90, ha='center', va='top')
 
         # Values above bars
         for i, v in enumerate(daily_counts['count']):
             if v > 0:
-                plt.text(i, v+20, str(int(v)), ha='center')
+                plt.text(i, v+max_bar_size/30, str(int(v)), ha='center')
 
         # Blue line - last scraping
-        plt.axvline(x=daily_counts[daily_counts['date'] == last_scraping['date'].iloc[0]].index[0], color='blue')
-        plt.text(x=daily_counts[daily_counts['date'] == last_scraping['date'].iloc[0]].index[0], y=500, s="last model update", rotation=90, ha='right')
+        plt.axvline(x=daily_counts[daily_counts['date'] == last_scraping['date'].max()].index[0], color='blue')
+        plt.text(x=daily_counts[daily_counts['date'] == last_scraping['date'].max()].index[0], y=max_bar_size/20, s="last model update", rotation=90, ha='right', va='bottom')
 
         # Red line - recommended update
         plt.axvline(x=daily_counts[daily_counts['date'] == max_date.strftime('%Y-%m-%d')].index[0], color='red')
-        plt.text(x=daily_counts[daily_counts['date'] == max_date.strftime('%Y-%m-%d')].index[0], y=500, s="model update recommendation", rotation=90, ha='right')
+        plt.text(x=daily_counts[daily_counts['date'] == max_date.strftime('%Y-%m-%d')].index[0], y=max_bar_size/20, s="model update recommendation", rotation=90, ha='right', va='bottom')
 
         plt.tight_layout()
         plt.show()

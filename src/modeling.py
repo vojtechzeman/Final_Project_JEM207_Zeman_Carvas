@@ -6,15 +6,27 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+import joblib
+import os
 
 
 class Model:
     def __init__(self) -> None:
         pass
 
-    def train_model(self, process_sale: bool = False, process_rent: bool = False) -> Pipeline:
+    def train_model(self, process_sale: bool = False, process_rent: bool = False) -> None:
         # Load data
-        df = pd.read_csv("data/processed/sale.csv", sep=';')
+        if process_sale:
+            df_0 = pd.read_csv("data/processed/sale_0.csv", sep=';')    # This is a dataset (scraped by different scraper) between September 2024 and January 2025. It is not included in datasets scraped by current scraper. In the future, when the current datasets are large enough, this dataset will be deleted.
+            df = pd.read_csv("data/processed/sale.csv", sep=';')
+        elif process_rent:
+            df_0 = pd.read_csv("data/processed/rent_0.csv", sep=';')    # This is a dataset (scraped by different scraper) between September 2024 and January 2025. It is not included in datasets scraped by current scraper. In the future, when the current datasets are large enough, this dataset will be deleted.
+            df = pd.read_csv("data/processed/rent.csv", sep=';')
+
+
+        # Concatenate the datasets
+        df = pd.concat([df_0, df], axis=0, ignore_index=True)
+        
         
         # Split features
         continuous_features = ['usable_area']
@@ -63,5 +75,13 @@ class Model:
         model.fit(X, y)
 
         print(f"Model successfully trained.")
-        
-        return model
+    
+
+        if process_sale:
+            joblib.dump(model, "sale_model.joblib")
+        elif process_rent:
+            joblib.dump(model, "rent_model.joblib")  
+
+
+
+
