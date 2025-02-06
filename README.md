@@ -37,4 +37,3 @@ For future improvements to the project, we plan to implement a continuous variab
 Vojtěch Zeman, Tomáš Čarvaš
 
 
-
