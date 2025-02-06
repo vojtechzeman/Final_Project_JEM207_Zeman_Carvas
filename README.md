@@ -28,7 +28,7 @@ The scraper updates prices of previously downloaded advertisements and downloads
 
 After successfully building the model, users can search for undervalued apartments using "main_search.py". The program allows users to analyze either sales or rental listings by scraping current advertisements. Results are displayed on an interactive website where users can apply filters to find their ideal apartment. Each property listing includes an image that links directly to the original advertisement.
 
-If users want to monitor listings without downloading the repository, they can use the link mentioned in the "navigation scheme" (though the data will not be up-to-date).
+If users want to monitor listings without downloading the repository, they can use the <a href="https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/" title=https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/>link</a> for Github Pages (though the data will not be up-to-date).
 
 For future improvements to the project, we plan to implement a continuous variable measuring the size of spaces associated with apartments (balcony, garden, cellar, etc.), which we could not scrape with the previous scraper and did not have time to implement with the new scraper.
 
