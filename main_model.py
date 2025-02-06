@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # DECIDE WHETHER TO 'CHECK MODEL HISTORY' OR 'UPDATE MODEL'
     # DECIDE WHICH DATA YOU WILL PERFORM OPERATION WITH
 
-    operation = 'update_model'    # Choose: 'check_history' | 'update_model'
+    operation = 'check_history'    # Choose: 'check_history' | 'update_model'
     data_type = 'sale'            # Choose: 'sale' | 'rent'
     # -----------------------------------------------------------------------
 
