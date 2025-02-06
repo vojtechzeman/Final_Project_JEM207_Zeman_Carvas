@@ -56,19 +56,21 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------------
     # DECIDE WHETHER YOU WANT TO BUY OR RENT AN APARTMENT
 
-    data_type = 'rent'            # Choose: 'sale' | 'rent'
+    data_type = 'sale'            # Choose: 'sale' | 'rent'
     # -----------------------------------------------------------------------
 
 
     if data_type == 'sale':
         # TODO add scraper SALE
-        data_processor.process_data(process_sale=True, process_rent=False)
+        data_processor.process_data(process_sale=True, process_rent=False, search = True)
         annuity_processor.process_data_annuity(search = True)
-        searcher.search_apartments(process_sale=True, process_rent=False)
+        result_df = searcher.search_apartments(process_sale=True, process_rent=False)
     elif data_type == 'rent':
         # TODO add scraper RENT
         data_processor.process_data(process_sale=False, process_rent=True, search = True)
-        searcher.search_apartments(process_sale=False, process_rent=True)
+        result_df = searcher.search_apartments(process_sale=False, process_rent=True)
+
+    print(result_df)
     
 
 

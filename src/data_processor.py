@@ -64,11 +64,20 @@ class DataProcessor:
 
         """
 
+
+        # Load last_scraping_for_modeling
+        if search:
+            if process_sale:
+                df = pd.read_json("last_scraping_for_modeling/sale.json")
+            elif process_rent:
+                df = pd.read_json("last_scraping_for_modeling/rent.json")
+            
         # Load raw JSON data
-        if process_sale:
-            df = pd.read_json("data/raw/deleted_sale.json")
-        elif process_rent:
-            df = pd.read_json("data/raw/deleted_rent.json")
+        else:
+            if process_sale:
+                df = pd.read_json("data/raw/deleted_sale.json")
+            elif process_rent:
+                df = pd.read_json("data/raw/deleted_rent.json")
             
         # Keep only specified columns
         df = df[[col for col in df.columns if col in self.keep_columns]]

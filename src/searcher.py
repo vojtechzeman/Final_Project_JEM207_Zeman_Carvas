@@ -1,6 +1,7 @@
 from sklearn.pipeline import Pipeline
 import joblib
 import pandas as pd
+import os
 
 
 class Searcher:
@@ -19,8 +20,11 @@ class Searcher:
         # Load data
         if process_sale:
             df = pd.read_json("data/processed/sale.json")
+            os.remove("data/processed/sale.json")
         elif process_rent:
             df = pd.read_json("data/processed/rent.json")
+            os.remove("data/processed/rent.json")
+
 
         # Split features
         continuous_features = ['usable_area']
@@ -58,6 +62,6 @@ class Searcher:
             'predicted_price': predicted_prices
         })
         
-        print(result_df)
+
         return result_df
 
