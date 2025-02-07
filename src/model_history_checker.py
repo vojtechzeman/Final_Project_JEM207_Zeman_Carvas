@@ -19,18 +19,17 @@ class HistoryChecker:
         # Loading data
         if check_sale:
             df = pd.read_csv("data/processed/sale.csv", sep=';')
-            last_scraping = pd.read_json("last_scraping_for_modeling/sale.json")
         if check_rent:
             df = pd.read_csv("data/processed/rent.csv", sep=';')
-            last_scraping = pd.read_json("last_scraping_for_modeling/rent.json")
 
         # Timestamp to date
         df['date'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d')
-        last_scraping['date'] = pd.to_datetime(last_scraping['timestamp']).dt.strftime('%Y-%m-%d')
+        last_scraping = datetime.strptime(max(glob.glob("rent_model_*.joblib")).split('_')[2].replace('.joblib',''), '%d.%m.%Y').strftime('%Y-%m-%d')
+
 
         # Width of the graph
         min_date = pd.to_datetime(df['date']).min()
-        max_date = pd.to_datetime(last_scraping['date']).max()
+        max_date = pd.to_datetime(last_scraping)
         blue_line = max_date - min_date
         days_difference = (pd.to_datetime('today').normalize() - max_date).days
         max_date = max_date + pd.DateOffset(days=max(x, days_difference))
@@ -72,8 +71,8 @@ class HistoryChecker:
                 plt.text(i, v+max_bar_size/30, str(int(v)), ha='center')
 
         # Blue line - last scraping
-        plt.axvline(x=daily_counts[daily_counts['date'] == last_scraping['date'].max()].index[0], color='blue')
-        plt.text(x=daily_counts[daily_counts['date'] == last_scraping['date'].max()].index[0], y=max_bar_size/20, s="last model update", rotation=90, ha='right', va='bottom')
+        plt.axvline(x=daily_counts[daily_counts['date'] == last_scraping].index[0], color='blue')
+        plt.text(x=daily_counts[daily_counts['date'] == last_scraping].index[0], y=max_bar_size/20, s="last model update", rotation=90, ha='right', va='bottom')
 
         # Red line - recommended update
         plt.axvline(x=daily_counts[daily_counts['date'] == max_date.strftime('%Y-%m-%d')].index[0], color='red')

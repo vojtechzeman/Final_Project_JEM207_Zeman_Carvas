@@ -37,3 +37,262 @@ bools (true | false):   "balcony="
                         "elevator="
 ---------------------------------------------------------
 """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from datetime import datetime
+import glob
+import joblib
+import os
+
+
+class Model:
+    def __init__(self) -> None:
+        pass
+
+    def remove_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove outliers based on price per m² and extreme values.
+        Uses IQR method as it's robust and doesn't assume normal distribution.
+        """
+        print("\nOutlier Detection:")
+        initial_len = len(df)
+        
+        # Calculate price per m²
+        df['price_per_m2'] = df['price'] / df['usable_area']
+        
+        # IQR method for price per m²
+        Q1_price = df['price_per_m2'].quantile(0.25)
+        Q3_price = df['price_per_m2'].quantile(0.75)
+        IQR_price = Q3_price - Q1_price
+        price_lower = Q1_price - 1.5 * IQR_price
+        price_upper = Q3_price + 1.5 * IQR_price
+        
+        # Remove price per m² outliers
+        df = df[
+            (df['price_per_m2'] >= price_lower) & 
+            (df['price_per_m2'] <= price_upper)
+        ]
+        
+        # Also remove extreme area values
+        Q1_area = df['usable_area'].quantile(0.25)
+        Q3_area = df['usable_area'].quantile(0.75)
+        IQR_area = Q3_area - Q1_area
+        area_lower = Q1_area - 1.5 * IQR_area
+        area_upper = Q3_area + 1.5 * IQR_area
+        
+        df = df[
+            (df['usable_area'] >= area_lower) & 
+            (df['usable_area'] <= area_upper)
+        ]
+        
+        removed = initial_len - len(df)
+        print(f"Removed {removed} outliers ({(removed/initial_len*100):.1f}% of data)")
+        print(f"Price per m² range after outlier removal: {df['price_per_m2'].min():,.0f} - {df['price_per_m2'].max():,.0f} CZK/m²")
+        print(f"Area range after outlier removal: {df['usable_area'].min():.1f} - {df['usable_area'].max():.1f} m²")
+        
+        return df
+
+    def prepare_features(self, df: pd.DataFrame, dummy_features: list) -> pd.DataFrame:
+        """
+        Create interaction terms between area and dummy variables
+        """
+        # Create interactions for all dummy features
+        area = df['usable_area']
+        for feature in dummy_features:
+            df[f'{feature}_x_area'] = df[feature] * area
+        
+        return df
+
+    def train_model(self, process_sale: bool = False, process_rent: bool = False) -> None:
+        """
+        Train the real estate price prediction model with area interactions.
+        """
+        # Load data
+        if process_sale:
+            df_0 = pd.read_csv("data/processed/sale_0.csv", sep=';')
+            df = pd.read_csv("data/processed/sale.csv", sep=';')
+            print("\nTraining SALE price model")
+        elif process_rent:
+            df_0 = pd.read_csv("data/processed/rent_0.csv", sep=';')
+            df = pd.read_csv("data/processed/rent.csv", sep=';')
+            print("\nTraining RENT price model")
+
+        # Concatenate the datasets
+        df = pd.concat([df_0, df], axis=0, ignore_index=True)
+
+        # Basic data analysis before outlier removal
+        print(f"\nDataset Overview (Before Outlier Removal):")
+        print(f"Number of properties: {len(df)}")
+        
+        print("\nPrice per m² Statistics (Before Outlier Removal):")
+        price_per_m2 = df['price'] / df['usable_area']
+        print(price_per_m2.describe().round(0))
+        
+        # Remove outliers
+        df = self.remove_outliers(df)
+        
+        # Define base features
+        continuous_features = ['usable_area']
+        if process_sale:
+            dummy_features = [
+                'garage', 'cellar', 'low_energy', 'balcony', 'easy_access',
+                'terrace', 'loggia', 'parking_lots', 'elevator', 'material_brick',
+                'material_panel', 'Prague_1', 'Prague_2', 'Prague_3', 'Prague_4',
+                'Prague_5', 'Prague_6', 'Prague_7', 'Prague_8', 'Prague_9',
+                'floor_ground', 'floor_above_ground', 'status_good', 'status_very_good',
+                'status_before_reconstruction', 'status_after_reconstruction',
+                'status_project', 'status_under_construction', 'kitchen_separately',
+                'ownership_private', 'nonresidential_unit'
+            ]
+        elif process_rent:
+            dummy_features = [
+                'garage', 'cellar', 'low_energy', 'balcony', 'easy_access',
+                'terrace', 'loggia', 'parking_lots', 'elevator', 'material_brick',
+                'material_panel', 'Prague_1', 'Prague_2', 'Prague_3', 'Prague_4',
+                'Prague_5', 'Prague_6', 'Prague_7', 'Prague_8', 'Prague_9',
+                'floor_ground', 'floor_above_ground', 'status_good', 'status_very_good',
+                'status_after_reconstruction', 'kitchen_separately', 'nonresidential_unit',
+                'fully_furnished', 'partially_furnished'
+            ]
+
+        # Create interaction features
+        df = self.prepare_features(df, dummy_features)
+        interaction_features = [f'{feature}_x_area' for feature in dummy_features]
+
+        # Check for missing values in relevant features
+        relevant_columns = continuous_features + dummy_features + interaction_features + ['price']
+        missing_values = df[relevant_columns].isnull().sum()
+        if missing_values.any():
+            print("\nMissing Values in Model Features:")
+            print(missing_values[missing_values > 0])
+
+        # Base dataset with interactions
+        X = df[continuous_features + dummy_features + interaction_features].copy()
+        y = df['price'].copy()
+
+        # Train-test split for validation
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Model pipeline without scaling for direct coefficient interpretation
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('all', 'passthrough', continuous_features + dummy_features + interaction_features)
+            ],
+            sparse_threshold=0
+        )
+
+        model = Pipeline([
+            ('preprocessor', preprocessor),
+            ('regressor', LinearRegression())
+        ])
+
+        # Train the model
+        model.fit(X_train, y_train)
+
+        # Get predictions
+        y_train_pred = model.predict(X_train)
+        y_test_pred = model.predict(X_test)
+
+        # Model performance metrics
+        print("\nModel Performance:")
+        print("Training set:")
+        print(f"R² Score: {r2_score(y_train, y_train_pred):.3f}")
+        print(f"Mean Absolute Error: {mean_absolute_error(y_train, y_train_pred):,.0f} CZK")
+        print(f"Root Mean Squared Error: {np.sqrt(mean_squared_error(y_train, y_train_pred)):,.0f} CZK")
+        
+        print("\nTest set:")
+        print(f"R² Score: {r2_score(y_test, y_test_pred):.3f}")
+        print(f"Mean Absolute Error: {mean_absolute_error(y_test, y_test_pred):,.0f} CZK")
+        print(f"Root Mean Squared Error: {np.sqrt(mean_squared_error(y_test, y_test_pred)):,.0f} CZK")
+
+        # Get coefficients
+        coefficients = model.named_steps['regressor'].coef_
+        intercept = model.named_steps['regressor'].intercept_
+
+        print("\nBase Model Coefficients:")
+        print(f"Base price (intercept): {intercept:,.0f} CZK")
+        print(f"Base price per m²: {coefficients[0]:,.0f} CZK")
+
+        # Feature coefficients
+        print("\nFixed Effects (Independent of Size):")
+        for feature, coef in zip(dummy_features, coefficients[1:len(dummy_features)+1]):
+            if abs(coef) > 0:
+                print(f"{feature}: {coef:+,.0f} CZK")
+
+        print("\nArea Interaction Effects (Additional Price per m²):")
+        for feature, coef in zip(dummy_features, coefficients[len(dummy_features)+1:]):
+            if abs(coef) > 0:
+                print(f"{feature}: {coef:+,.0f} CZK/m²")
+
+        # Example predictions
+        print("\nExample Predictions:")
+        for i in range(min(5, len(X_test))):
+            actual = y_test.iloc[i]
+            pred = y_test_pred[i]
+            area = X_test['usable_area'].iloc[i]
+            print(f"\nProperty {i+1}:")
+            print(f"Area: {area:.1f} m²")
+            print(f"Actual price: {actual:,.0f} CZK")
+            print(f"Predicted price: {pred:,.0f} CZK")
+            print(f"Actual price per m²: {actual/area:,.0f} CZK/m²")
+            print(f"Predicted price per m²: {pred/area:,.0f} CZK/m²")
+            print(f"Prediction error: {((pred-actual)/actual*100):,.1f}%")
+
+        print(f"\nModel successfully trained.")
+
+        # Get current date in the desired format
+        current_date = datetime.now().strftime("%d.%m.%Y")
+
+        # Save the model
+        if process_sale:
+            try:
+                os.remove(glob.glob("sale_model_*.joblib")[0])
+            except IndexError:
+                pass  # No old model exists
+            joblib.dump(model, f"sale_model_{current_date}.joblib")
+        elif process_rent:
+            try:
+                os.remove(glob.glob("rent_model_*.joblib")[0])
+            except IndexError:
+                pass  # No old model exists
+            joblib.dump(model, f"rent_model_{current_date}.joblib")
+
+    def load_model(self, load_sale: bool = False, load_rent: bool = False) -> Pipeline:
+        """Load the most recent model file."""
+        try:
+            if load_sale:
+                model = joblib.load(glob.glob("sale_model_*.joblib")[0])
+            elif load_rent:
+                model = joblib.load(glob.glob("rent_model_*.joblib")[0])
+            return model
+        except IndexError:
+            raise FileNotFoundError("No model file found")

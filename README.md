@@ -18,7 +18,7 @@ Our project focuses on identifying undervalued apartments in Prague by analyzing
         │       └── rent
         │      
         └── main_search.py (if you decide the model is relevant, you can start looking for undervalued apartments)
-                ├── sale  ── after scraping the user is redirected to the well-organized website with built-in filter (<a href="https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/" title=https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/>Github pages</a>)
+                ├── sale  ── after scraping the user is redirected to the website with built-in filter (<a href="https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/" title=https://vojtechzeman.github.io/Final_Project_JEM207_Zeman_Carvas/>Github pages</a>)
                 └── rent  ──              ────────── // ──────────
 </pre>
 
