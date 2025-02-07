@@ -100,10 +100,10 @@
             font-size: 32px;
             font-weight: bold;
         }
-		.pricing-badge.positive {
+		.pricing-badge.negative {
             background-color: #28a745;
         }
-        .pricing-badge.negative {
+        .pricing-badge.positive {
             background-color: #ff4444;
         }
 		.tooltip {
@@ -339,7 +339,7 @@
                             <p>${(estate.usable_area + " m²") || 'Unknown Type'} - ${getType(estate.size) || 'N/A'}</p>
                             <p><strong>${estate.price ? estate.price.toLocaleString() : 'N/A'} Kč</strong></p>
                         </div>
-						<div class="tooltip"><span class="tooltiptext">${(Math.round(estate.estimate*estate.price)).toLocaleString() + " Kč"}</span>
+						<div class="tooltip"><span class="tooltiptext">${(Math.round(estate.price/estate.estimate)).toLocaleString() + " Kč"}</span>
 							<div class="pricing-badge ${(1 - estate.estimate) > 0 ? 'negative' : 'positive'}">
 							${getPercentage((1 - estate.estimate)*100)}%
 							</div>
@@ -398,10 +398,10 @@
 		}
 		
 		function getPercentage(num) {
-			if (num < 0) {
-				return num.toFixed(2);
-			} else if (num > 0) {
-				return "+" + num.toFixed(2);
+			if (num > 0) {
+				return "-" + Math.abs(num.toFixed(2));
+			} else if (num < 0) {
+				return "+" + Math.abs(num.toFixed(2));
 			} else {
 				return "0";
 			}
