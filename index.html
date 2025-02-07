@@ -209,6 +209,13 @@
 				<option value="2">Vzestupně</option>
 			</select>
         </div>
+		<div>
+            <div class="filter-label">Vlastnictví bytu</div>
+            <select id="ownership">
+				<option value="1">Soukromé</option>
+				<option value="2">Družstevní/Statní a Obecní</option>
+			</select>
+        </div>
         <div>
             <div class="filter-label">‎ </div>
             <button onclick="resetFilters()">Reset</button>
@@ -304,7 +311,7 @@
 			let minPrice = document.getElementById('minPrice').value;
             let maxsize = document.getElementById('maxsize').value;
 			let minsize = document.getElementById('minsize').value;
-			console.log(Prague);
+			let owner = document.getElementById('ownership').value;
 
             let results = estates.filter(estate => 
 				(maxPrice === "" || estate.price <= Number(maxPrice)) &&
@@ -315,7 +322,8 @@
                 (type === "" || estate.size === type)  &&
                 (maxsize === "" || estate.usable_area <= maxsize) &&
 				(minsize === "" || estate.usable_area >= minsize) &&
-				(estate.estimate > 0 && estate.estimate < 2)
+				(estate.estimate > 0 && estate.estimate < 2) &&
+				(estate.ownership == getOwner(owner))
             );
 			let order = document.getElementById('sorting').value;
 			if (order === "1") {
@@ -324,6 +332,7 @@
 			  results.sort((a, b) => a.estimate - b.estimate); // Ascending
 			}
 			
+			console.log("owner: "+getOwner(owner))
 			
 
             let listings = document.getElementById('listings');
@@ -404,6 +413,14 @@
 				return "+" + Math.abs(num.toFixed(2));
 			} else {
 				return "0";
+			}
+		}
+		
+		function getOwner(num) {
+			if (num == 1) {
+				return 1;
+			} else if (num >= 2) {
+				return 2;
 			}
 		}
 
